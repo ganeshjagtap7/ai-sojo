@@ -1,0 +1,17 @@
+import { streamText, stepCountIs } from 'ai';
+import { getAIProvider } from '@/lib/ai/provider';
+import { systemPrompt, updateCriteriaTool } from '@/lib/ai/conversation';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: getAIProvider(),
+    system: systemPrompt,
+    messages,
+    tools: { update_criteria: updateCriteriaTool },
+    stopWhen: stepCountIs(2),
+  });
+
+  return result.toUIMessageStreamResponse();
+}
