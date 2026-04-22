@@ -8,35 +8,31 @@ export const systemPrompt = readFileSync(
   'utf-8'
 );
 
-export const updateCriteriaTool = tool({
-  description: 'Update search criteria based on what the user just said. Call this after EVERY user message.',
+const teachCellSchema = z.object({
+  n: z.string(),
+  name: z.string(),
+  body: z.string(),
+});
+
+export const updateSessionTool = tool({
+  description: 'Update the session state after every user message. Always call this.',
   inputSchema: zodSchema(z.object({
-    criteriaComplete: z.boolean().describe('True when at least city AND industry are filled'),
-    criteria: z.object({
-      location: z.object({
-        city: z.string().nullable(),
-        state: z.string().nullable(),
-        country: z.string().default('US'),
-        radiusMiles: z.number().default(50),
-      }),
-      industry: z.object({
-        primary: z.string().nullable(),
-        subSectors: z.array(z.string()).default([]),
-        keywords: z.array(z.string()).default([]),
-      }),
-      businessSize: z.object({
-        revenueMin: z.number().nullable().default(null),
-        revenueMax: z.number().nullable().default(null),
-        employeeMin: z.number().nullable().default(null),
-        employeeMax: z.number().nullable().default(null),
-      }),
-      preferences: z.object({
-        businessAgeYears: z.number().nullable().default(null),
-        ownerOperated: z.boolean().nullable().default(null),
-        disqualifiers: z.array(z.string()).default([]),
-      }),
-      searcherType: z.enum(['traditional', 'self_funded', 'aspiring', 'unknown']).default('unknown'),
-    }),
+    mode: z.enum(['elicit', 'pushback', 'teach', 'confirm']),
+    bucket: z
+      .enum(['opening', 'stickiness', 'archetype', 'disqualifier', 'concentration-nuance', 'vision'])
+      .nullable()
+      .optional(),
+    bucketValue: z.string().nullable().optional(),
+    pushbackOf: z.string().nullable().optional(),
+    teachCard: z
+      .object({
+        eye: z.string(),
+        h: z.string(),
+        cells: z.array(teachCellSchema),
+      })
+      .nullable()
+      .optional(),
+    sessionComplete: z.boolean().default(false),
   })),
   execute: async (params) => params,
 });
