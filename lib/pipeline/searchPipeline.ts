@@ -3,6 +3,7 @@ import { jobStore } from './jobStore';
 import { generateSearchQueries } from '@/lib/ai/queryGenerator';
 import { scrapeGoogleMaps } from '@/lib/scraping/googleMaps';
 import { scrapeWebSearch } from '@/lib/scraping/webSearch';
+import { scrapeBBB } from '@/lib/scraping/bbb';
 import { deduplicateLeads } from '@/lib/utils/deduplicator';
 import { enrichLeads } from '@/lib/ai/enricher';
 import { rankLeads } from '@/lib/ai/ranker';
@@ -18,15 +19,16 @@ export async function runSearchPipeline(jobId: string, criteria: SearchCriteria)
     // Step 2 + 3: Scrape in parallel
     jobStore.updateProgress(
       jobId,
-      'scraping_google_maps',
+      'scraping_sources',
       1,
       4,
-      `Searching Google Maps for ${criteria.industry.primary} in ${criteria.location.city}...`
+      `Searching Google Maps, web, and BBB for ${criteria.industry.primary} in ${criteria.location.city}...`
     );
 
-    const [mapsResult, webResult] = await Promise.allSettled([
+    const [mapsResult, webResult, bbbResult] = await Promise.allSettled([
       scrapeGoogleMaps(queries.googleMaps, criteria.location),
       scrapeWebSearch(queries.webSearch),
+      scrapeBBB(queries.bbb, criteria.location),
     ]);
 
     if (mapsResult.status === 'rejected') {
@@ -35,10 +37,14 @@ export async function runSearchPipeline(jobId: string, criteria: SearchCriteria)
     if (webResult.status === 'rejected') {
       console.error('[Pipeline] Web search scraper failed:', webResult.reason);
     }
+    if (bbbResult.status === 'rejected') {
+      console.error('[Pipeline] BBB scraper failed:', bbbResult.reason);
+    }
 
     const rawLeads: RawLead[] = [
       ...(mapsResult.status === 'fulfilled' ? mapsResult.value : []),
       ...(webResult.status === 'fulfilled' ? webResult.value : []),
+      ...(bbbResult.status === 'fulfilled' ? bbbResult.value : []),
     ];
 
     console.log(`[Pipeline] Raw leads collected: ${rawLeads.length}`);
@@ -47,6 +53,7 @@ export async function runSearchPipeline(jobId: string, criteria: SearchCriteria)
       const reasons = [
         mapsResult.status === 'rejected' ? `Maps: ${mapsResult.reason?.message || mapsResult.reason}` : null,
         webResult.status === 'rejected' ? `Web: ${webResult.reason?.message || webResult.reason}` : null,
+        bbbResult.status === 'rejected' ? `BBB: ${bbbResult.reason?.message || bbbResult.reason}` : null,
       ].filter(Boolean).join('; ');
       throw new Error(reasons || 'No results found from any source. Try broadening your criteria.');
     }
@@ -73,6 +80,7 @@ export async function runSearchPipeline(jobId: string, criteria: SearchCriteria)
     const sourcesUsed: string[] = [
       ...(mapsResult.status === 'fulfilled' ? ['google_maps'] : []),
       ...(webResult.status === 'fulfilled' ? ['web_search'] : []),
+      ...(bbbResult.status === 'fulfilled' ? ['bbb'] : []),
     ];
 
     jobStore.complete(jobId, finalLeads, {

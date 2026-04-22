@@ -38,6 +38,8 @@ export async function scrapeGoogleMaps(
     categories: (item.categories as string[]) || [],
     yearsInBusiness: null,
     employeeCount: null,
+    bbbRating: null,
+    bbbAccredited: null,
     source: 'google_maps' as const,
     sourceUrl: (item.url as string) || null,
     rawData: item,

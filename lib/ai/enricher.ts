@@ -72,6 +72,8 @@ ${JSON.stringify(batch.map((l, i) => ({
         categories: lead.categories,
         yearsInBusiness: lead.yearsInBusiness,
         employeeCount: lead.employeeCount,
+        bbbRating: lead.bbbRating,
+        bbbAccredited: lead.bbbAccredited,
         source: lead.source,
         sourceUrl: lead.sourceUrl,
         contact: {
@@ -87,6 +89,8 @@ ${JSON.stringify(batch.map((l, i) => ({
           estimatedRevenue: enrichment.estimatedRevenue,
           googleRating: lead.googleRating,
           reviewCount: lead.reviewCount,
+          bbbRating: lead.bbbRating,
+          bbbAccredited: lead.bbbAccredited,
           operatingHours: null,
           categories: lead.categories,
         },

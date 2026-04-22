@@ -46,6 +46,8 @@ export async function scrapeWebSearch(queries: string[]): Promise<RawLead[]> {
       categories: [],
       yearsInBusiness: null,
       employeeCount: null,
+      bbbRating: null,
+      bbbAccredited: null,
       source: 'web_search' as const,
       sourceUrl: (item.url as string) || null,
       rawData: item,
