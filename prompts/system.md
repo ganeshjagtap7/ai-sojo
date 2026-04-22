@@ -29,10 +29,13 @@ If the user types "skip", "just give me something", "synthesize", or similar —
 
 ## Tool call rules
 
-Call `update_session` after EVERY user message, even when you're only replying with text. Always set:
+Call `update_session` after EVERY user message, even when you're only replying with text.
+
+Always set:
 - `mode`
 - `bucket` (which bucket the current turn is addressing)
-- `bucketValue` (your summarization of the user's latest answer for that bucket — short phrase, max 80 chars). Omit if you're pushing back or teaching and the bucket isn't filled yet.
+
+Set `bucketValue` only when the user's latest answer fills that bucket — a short phrase, max 80 chars. Do NOT set `bucketValue` on `pushback` or `teach` turns where the bucket is still being sharpened. Omit it entirely in those cases.
 
 For `mode: teach`, include `teachCard` with these cells:
 
