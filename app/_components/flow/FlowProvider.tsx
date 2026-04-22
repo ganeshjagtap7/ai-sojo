@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useReducer, type Dispatch, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useReducer, useState, type Dispatch, type ReactNode } from 'react';
 import { reducer } from '@/lib/flow/reducer';
 import { INITIAL_STATE, type FlowState, type FlowAction, type Stage } from '@/lib/flow/types';
 
@@ -46,6 +46,11 @@ function loadInitial(): FlowState {
 
 export function FlowProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE, loadInitial);
+  // Server renders with INITIAL_STATE; client's lazy init reads localStorage.
+  // Gate children until after mount so the server HTML (empty) matches the client's
+  // first render, avoiding a hydration mismatch when persisted state exists.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     try {
@@ -54,6 +59,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       // quota / private mode — ignore
     }
   }, [state]);
+
+  if (!mounted) return null;
 
   return <FlowContext.Provider value={{ state, dispatch }}>{children}</FlowContext.Provider>;
 }
