@@ -23,11 +23,9 @@ export async function generateThesis(input: {
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const cleaned = text
-      .trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/```\s*$/, '')
-      .trim();
+    // Tolerant extractor: grab the outermost JSON object. Survives markdown fences, prose preambles, trailing notes.
+    const match = text.match(/\{[\s\S]*\}/);
+    const cleaned = match ? match[0] : text.trim();
 
     const parsed = JSON.parse(cleaned);
     return {
@@ -38,9 +36,27 @@ export async function generateThesis(input: {
       archetypeLabel: String(parsed.archetypeLabel ?? ''),
       flag: parsed.flag == null ? null : String(parsed.flag),
     };
-  } catch {
+  } catch (err) {
+    console.error('[thesis] fallback triggered:', err);
     return fallbackThesis(input);
   }
+}
+
+const ARCHETYPE_LABELS: Record<string, string> = {
+  monopoly: 'Local monopoly',
+  consolidator: 'Consolidator',
+  operator: 'Operator upgrade',
+  upgrade: 'Operator upgrade',
+  quiet: 'Quiet moat',
+  moat: 'Quiet moat',
+};
+
+function normalizeArchetypeLabel(raw: string): string {
+  const k = raw.toLowerCase();
+  for (const key of Object.keys(ARCHETYPE_LABELS)) {
+    if (k.includes(key)) return ARCHETYPE_LABELS[key];
+  }
+  return 'Consolidator';
 }
 
 function fallbackThesis({ archetype, facts, buckets }: {
@@ -53,10 +69,11 @@ function fallbackThesis({ archetype, facts, buckets }: {
   const moat = buckets.stickiness || 'meaningful switching cost';
   const disq = buckets.disqualifier || 'customer concentration above 40%';
   const vision = buckets.vision || 'compounded, calm, worth running';
+  const horizon = facts.horizon ?? 'held long';
   return {
-    headline: `A ${shape.toLowerCase()} play in ${geo}.`,
-    archetypeLabel: shape,
-    paragraph: `You are looking for ${shape.toLowerCase()} in ${geo}, writing ${facts.check ?? '$3–10M'} of equity with a ${facts.horizon ?? '5–10 yr'} horizon. The moat you care about is ${moat}. You walk away if ${disq}. In five years: ${vision}.`,
+    headline: `A ${shape.toLowerCase()} play in ${geo}, ${horizon}.`,
+    archetypeLabel: normalizeArchetypeLabel(shape),
+    paragraph: `You are looking for ${shape.toLowerCase()} in ${geo}, writing ${facts.check ?? '$3–10M'} of equity with a ${horizon} horizon. The moat you care about is ${moat}. You walk away if ${disq}. In five years: ${vision}.`,
     sharpening: `You refined your opening take into something testable by session's end.`,
     disqualifiers: [
       disq,
