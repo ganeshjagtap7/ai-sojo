@@ -15,6 +15,8 @@ function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
     categories: existing.categories.length ? existing.categories : incoming.categories,
     yearsInBusiness: existing.yearsInBusiness ?? incoming.yearsInBusiness,
     employeeCount: existing.employeeCount ?? incoming.employeeCount,
+    bbbRating: existing.bbbRating ?? incoming.bbbRating,
+    bbbAccredited: existing.bbbAccredited ?? incoming.bbbAccredited,
   };
 }
 

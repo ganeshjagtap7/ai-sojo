@@ -8,12 +8,18 @@ Given acquisition criteria, generate search queries optimized for two sources:
    - Example: "residential plumbing contractor in Atlanta, GA"
 
 2. **Web search queries** (3-5): These search Google web results for directories and listings.
-   - Target Yelp, Yellow Pages, BBB, industry-specific directories
+   - Target Yelp, Yellow Pages, industry-specific directories
    - Example: "plumbing companies Atlanta GA reviews"
    - Example: "best plumbing contractors Atlanta"
+
+3. **BBB queries** (2-4): Short keyword phrases passed to the BBB.org search box (location is supplied separately, so do NOT include city/state).
+   - Use the bare industry term or sub-sector
+   - Example: "plumbing contractor"
+   - Example: "residential plumbing"
 
 Return JSON:
 {
   "googleMaps": ["query1", "query2", ...],
-  "webSearch": ["query1", "query2", ...]
+  "webSearch": ["query1", "query2", ...],
+  "bbb": ["query1", "query2", ...]
 }

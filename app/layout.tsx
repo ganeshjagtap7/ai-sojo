@@ -1,35 +1,35 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
+import { Inter, Spectral, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import './flow.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const spectral = Spectral({
+  variable: '--font-spectral',
   subsets: ['latin'],
-});
-
-const instrumentSerif = Instrument_Serif({
-  variable: '--font-instrument-serif',
-  subsets: ['latin'],
-  weight: '400',
+  weight: ['300', '400', '500', '600', '700'],
   style: ['normal', 'italic'],
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
+  weight: ['400', '500'],
+});
+
 export const metadata: Metadata = {
-  title: 'Sojo — AI Deal Sourcing',
-  description: 'AI-native deal sourcing for private equity and SMB acquirers.',
+  title: 'Searcher — A thesis in four minutes',
+  description: 'An investment committee that thinks in targets, not decks.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
-    >
+    <html lang="en" className={`${inter.variable} ${spectral.variable} ${jetbrainsMono.variable}`}>
       <body>{children}</body>
     </html>
   );

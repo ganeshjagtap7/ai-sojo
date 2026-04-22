@@ -1,6 +1,6 @@
 import { streamText, stepCountIs } from 'ai';
 import { getAIProvider } from '@/lib/ai/provider';
-import { systemPrompt, updateCriteriaTool } from '@/lib/ai/conversation';
+import { systemPrompt, updateSessionTool } from '@/lib/ai/conversation';
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     model: getAIProvider(),
     system: systemPrompt,
     messages,
-    tools: { update_criteria: updateCriteriaTool },
+    tools: { update_session: updateSessionTool },
     stopWhen: stepCountIs(2),
   });
 
