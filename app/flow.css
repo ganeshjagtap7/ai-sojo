@@ -1695,3 +1695,14 @@ body { background: var(--paper); overflow: hidden; }
 }
 .tweak-b:hover { color: var(--ivory); border-color: rgba(239,233,219,0.5); }
 .tweak-b.on { background: var(--ivory); color: var(--night); border-color: var(--ivory); }
+.editable-input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--ink-40);
+  outline: none;
+  padding: 0 2px;
+  min-width: 60px;
+}
+.editable-input:focus { border-bottom-color: var(--ink); }
