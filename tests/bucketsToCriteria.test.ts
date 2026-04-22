@@ -62,3 +62,60 @@ test('TBD check size → null min/max', () => {
   assert.equal(c.businessSize.revenueMin, null);
   assert.equal(c.businessSize.revenueMax, null);
 });
+
+test('unknown region string falls back to Atlanta without crashing', () => {
+  const c = bucketsToCriteria({
+    archetype: null,
+    facts: { geo: ['Foobar'] },
+    buckets: { opening: 'coffee shops' },
+  });
+  assert.equal(c.location.city, 'Atlanta');
+  assert.equal(c.location.state, 'GA');
+});
+
+test('multi-geo picks first entry', () => {
+  const c = bucketsToCriteria({
+    archetype: null,
+    facts: { geo: ['Midwest', 'Southeast'] },
+    buckets: {},
+  });
+  assert.equal(c.location.city, 'Chicago');
+});
+
+test('empty-string opening does not produce empty industry.primary', () => {
+  const c = bucketsToCriteria({
+    archetype: null,
+    facts: {},
+    buckets: { opening: '   ' },
+  });
+  assert.ok(c.industry.primary.length > 0);
+  assert.equal(c.industry.primary, 'Business services');
+});
+
+test('opening preempts weak "services" keyword in stickiness', () => {
+  const c = bucketsToCriteria({
+    archetype: null,
+    facts: {},
+    buckets: { opening: 'coffee shops', stickiness: 'recurring services' },
+  });
+  assert.ok(c.industry.primary.toLowerCase().includes('coffee'));
+  assert.ok(!c.industry.primary.toLowerCase().includes('services'));
+});
+
+test('etf archetype maps to traditional searcherType', () => {
+  const c = bucketsToCriteria({
+    archetype: { id: 'etf', name: 'X' },
+    facts: {},
+    buckets: {},
+  });
+  assert.equal(c.searcherType, 'traditional');
+});
+
+test('holdco archetype maps to self_funded searcherType', () => {
+  const c = bucketsToCriteria({
+    archetype: { id: 'holdco', name: 'X' },
+    facts: {},
+    buckets: {},
+  });
+  assert.equal(c.searcherType, 'self_funded');
+});

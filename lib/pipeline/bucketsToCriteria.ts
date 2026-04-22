@@ -24,24 +24,27 @@ const INDUSTRY_KEYWORDS = [
   'services', 'repair', 'install', 'supply', 'distribution',
 ];
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 function deriveIndustry(buckets: Buckets): string {
-  const sources = [buckets.opening, buckets.stickiness, buckets.archetype].filter(Boolean) as string[];
-  const text = sources.join(' ').toLowerCase();
+  // The opening bucket is the authoritative industry signal — if present, use it.
+  // Stickiness/archetype describe moat shape, not industry, so their keywords
+  // should only be consulted when opening is missing entirely.
+  const opening = buckets.opening?.trim();
+  if (opening) return opening;
+
+  const rest = [buckets.stickiness, buckets.archetype].filter(Boolean) as string[];
+  const text = rest.join(' ').toLowerCase();
   for (const kw of INDUSTRY_KEYWORDS) {
     if (text.includes(kw)) {
-      return sources.find((s) => s.toLowerCase().includes(kw)) ?? capitalize(kw);
+      return rest.find((s) => s.toLowerCase().includes(kw)) ?? 'Business services';
     }
   }
-  return buckets.opening ?? 'Business services';
+  return 'Business services';
 }
 
 function deriveLocation(facts: Facts): { city: string; state: string; country: 'US'; radiusMiles: number } {
   const region = facts.geo?.[0];
-  const match = region ? REGION_CAPITALS[region] : REGION_CAPITALS.Southeast;
+  // `Facts.geo` is `string[]` — upstream/AI can emit anything. Fall back to Southeast on miss.
+  const match = (region && REGION_CAPITALS[region]) || REGION_CAPITALS.Southeast;
   return {
     city: match.city,
     state: match.state,
@@ -57,10 +60,14 @@ export function bucketsToCriteria(input: {
 }): SearchCriteria {
   const { facts, buckets, archetype } = input;
   const [rmin, rmax] = CHECK_TO_REV[facts.check ?? 'TBD'] ?? [null, null];
+  // ETF and holdco have no direct slot in legacy searcherType; map to closest peer
+  // so downstream ranker prompts pick the right tone.
   const searcherType: SearchCriteria['searcherType'] =
     archetype?.id === 'self-funded' ? 'self_funded' :
     archetype?.id === 'traditional' ? 'traditional' :
-    archetype?.id === 'exploring' ? 'aspiring' :
+    archetype?.id === 'etf'         ? 'traditional' :
+    archetype?.id === 'holdco'      ? 'self_funded' :
+    archetype?.id === 'exploring'   ? 'aspiring' :
     'unknown';
 
   return {
