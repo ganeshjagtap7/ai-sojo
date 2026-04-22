@@ -13,6 +13,35 @@ export function Stage6Deliver() {
     ? thesis.disqualifiers
     : [buckets.disqualifier || 'Customer concentration above 35%'];
 
+  // Empty state — no search has completed. Happens when the user skipped Stage 5
+  // via Next/Tweaks, refreshed mid-search (FlowProvider clears transient fields),
+  // or the search errored. Thesis may still be populated if /api/thesis succeeded.
+  if (leads.length === 0 && !searchMetadata) {
+    return (
+      <div className="s6 fade-in">
+        <div style={{ maxWidth: 640, margin: '120px auto', padding: '0 40px', textAlign: 'center' }}>
+          <div className="eye" style={{ marginBottom: 20 }}>§ Six · Delivery</div>
+          <h1 style={{ fontFamily: 'var(--serif)', fontSize: 44, fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1, marginBottom: 20 }}>
+            Nothing to <em>deliver</em> yet.
+          </h1>
+          <p style={{ fontSize: 16, color: 'var(--ink-70)', lineHeight: 1.6, marginBottom: 32 }}>
+            The search hasn&apos;t run — either you skipped ahead or the page was refreshed mid-generation. Go back to Stage 5 to kick it off.
+          </p>
+          <button
+            onClick={() => dispatch({ type: 'SET_STAGE', stage: 5 })}
+            style={{
+              fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500,
+              padding: '12px 22px', border: '1px solid var(--ink)',
+              background: 'var(--ink)', color: 'var(--paper)', cursor: 'pointer',
+            }}
+          >
+            ← Back to Stage 5 · Generate
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const funnelSteps = (() => {
     const total = searchMetadata?.totalScraped ?? 0;
     if (total < 50) return null;
