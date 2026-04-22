@@ -28,6 +28,9 @@ const BUCKET_DEFS: { id: BucketKey; label: string }[] = [
   { id: 'vision', label: 'Five-year picture' },
 ];
 
+const OPENER_TEXT =
+  "Let's start somewhere honest. What kinds of businesses do you find yourself thinking about — either a specific idea you have, or a general shape?";
+
 export function Stage3Converse() {
   const { state, dispatch } = useFlow();
   const [history, setHistory] = useState<ConvoItem[]>([]);
@@ -43,12 +46,13 @@ export function Stage3Converse() {
     if (convoRef.current) convoRef.current.scrollTop = convoRef.current.scrollHeight;
   }, [history, typing]);
 
-  // Kick off opener
+  // Seed with the hardcoded opener. /api/chat won't accept empty messages, and
+  // the opener is deterministic anyway — no reason to round-trip to the model.
   useEffect(() => {
     if (sentOpenerRef.current) return;
     sentOpenerRef.current = true;
-    sendToAI([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setHistory([{ role: 'ai', text: OPENER_TEXT, mode: 'elicit' }]);
+    setTyping(false);
   }, []);
 
   // Auto-advance to stage 4 on confirm
@@ -74,6 +78,7 @@ export function Stage3Converse() {
       let buffer = '';
       let aiText = '';
       let opened = false;
+      let streamError: string | null = null;
       let lastTool: {
         mode?: Mode; bucket?: BucketKey; bucketValue?: string;
         pushbackOf?: string; teachCard?: TeachCard; sessionComplete?: boolean;
@@ -95,16 +100,21 @@ export function Stage3Converse() {
               aiText += ev.delta;
               if (!opened) {
                 opened = true;
-                setTyping(false);
                 setHistory((h) => [...h, { role: 'ai', text: aiText, mode: 'elicit' } as AIMessage]);
               } else {
                 setHistory((h) => h.map((m, i) => (i === h.length - 1 && m.role === 'ai' ? { ...m, text: aiText } : m)));
               }
             } else if (ev.type === 'tool-input-available' && ev.toolName === 'update_session') {
               lastTool = ev.input;
+            } else if (ev.type === 'error' && typeof ev.errorText === 'string') {
+              streamError = ev.errorText;
             }
           } catch { /* ignore malformed */ }
         }
+      }
+
+      if (streamError && !opened) {
+        setHistory((h) => [...h, { role: 'ai', text: `(error: ${streamError})`, mode: 'elicit' } as AIMessage]);
       }
 
       if (lastTool) {
@@ -128,7 +138,9 @@ export function Stage3Converse() {
         });
         if (lastTool.sessionComplete) setSessionComplete(true);
       }
-    } catch {
+    } catch (err) {
+      setHistory((h) => [...h, { role: 'ai', text: `(network error: ${err instanceof Error ? err.message : 'unknown'})`, mode: 'elicit' } as AIMessage]);
+    } finally {
       setTyping(false);
     }
   }
