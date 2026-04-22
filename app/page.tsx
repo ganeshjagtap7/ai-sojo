@@ -10,6 +10,7 @@ import { Stage4Confirm } from './_components/flow/Stage4Confirm';
 import { Stage5Generate } from './_components/flow/Stage5Generate';
 import { Stage6Deliver } from './_components/flow/Stage6Deliver';
 import { Stage7After } from './_components/flow/Stage7After';
+import { TweaksPanel } from './_components/flow/TweaksPanel';
 
 function StageRouter() {
   const { state } = useFlow();
@@ -32,6 +33,7 @@ export default function Page() {
       <Shell>
         <StageRouter />
       </Shell>
+      <TweaksPanel />
     </FlowProvider>
   );
 }
