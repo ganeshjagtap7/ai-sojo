@@ -126,10 +126,12 @@ export function Stage6Deliver() {
               <svg viewBox="0 0 600 140" style={{ width: '100%', height: 140, display: 'block' }}>
                 {funnelSteps.map((s, i) => (
                   <g key={i} transform={`translate(${(600 - s.w) / 2}, ${i * 24 + 6})`}>
-                    <rect width={s.w} height={18} fill={i === 4 ? '#0E0E0C' : 'rgba(14,14,12,0.85)'} opacity={0.25 + i * 0.16} />
+                    <rect width={s.w} height={18} fill="#0E0E0C" opacity={0.15 + i * 0.14} />
+                    {/* Dark text with paper-colored halo — readable on any bar shade AND on ivory when text overflows a narrow bar. */}
                     <text x={s.w / 2} y={13} textAnchor="middle"
-                      fill={i >= 3 ? '#FAF7F0' : '#0E0E0C'}
-                      fontFamily="Inter" fontSize="10" fontWeight="500"
+                      fill="#0E0E0C"
+                      stroke="#FAF7F0" strokeWidth="3" strokeOpacity="0.85" paintOrder="stroke"
+                      fontFamily="Inter" fontSize="10" fontWeight="600"
                       letterSpacing="0.06em">
                       {s.label.toUpperCase()} · {s.n.toLocaleString()}
                     </text>
