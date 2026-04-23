@@ -1,5 +1,6 @@
 'use client';
 
+import { AuthProvider } from './_components/auth/AuthProvider';
 import { FlowProvider, useFlow } from './_components/flow/FlowProvider';
 import { Shell } from './_components/flow/Shell';
 import { Stage0Landing } from './_components/flow/Stage0Landing';
@@ -29,11 +30,13 @@ function StageRouter() {
 
 export default function Page() {
   return (
-    <FlowProvider>
-      <Shell>
-        <StageRouter />
-      </Shell>
-      <TweaksPanel />
-    </FlowProvider>
+    <AuthProvider>
+      <FlowProvider>
+        <Shell>
+          <StageRouter />
+        </Shell>
+        <TweaksPanel />
+      </FlowProvider>
+    </AuthProvider>
   );
 }

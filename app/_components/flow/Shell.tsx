@@ -1,6 +1,7 @@
 'use client';
 
 import { useFlow } from './FlowProvider';
+import { useAuth } from '../auth/AuthProvider';
 import type { ReactNode } from 'react';
 
 const STAGES = [
@@ -24,6 +25,7 @@ const ARCHETYPE_LABELS: Record<string, string> = {
 
 export function Shell({ children }: { children: ReactNode }) {
   const { state, dispatch } = useFlow();
+  const { user, signOut } = useAuth();
   const { stage, archetype } = state;
 
   const go = (n: number) => dispatch({ type: 'SET_STAGE', stage: Math.max(0, Math.min(7, n)) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 });
@@ -49,7 +51,15 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-        <div className="shell-right">
+        <div className="shell-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {user && (
+            <>
+              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.05em' }}>
+                {user.email}
+              </span>
+              <a className="doc-link" href="#" onClick={(e) => { e.preventDefault(); signOut(); }}>Sign out</a>
+            </>
+          )}
           <a className="doc-link" href="#" onClick={(e) => { e.preventDefault(); restart(); }}>Restart</a>
         </div>
       </header>

@@ -1,10 +1,48 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useFlow } from './FlowProvider';
+import { useAuth } from '../auth/AuthProvider';
+import { Stage7AuthGate } from '../auth/Stage7AuthGate';
 
 export function Stage7After() {
   const { state, dispatch } = useFlow();
-  const { leads, thesis } = state;
+  const { user, loading } = useAuth();
+  const savedRef = useRef(false);
+
+  const { leads, thesis, archetype, facts, buckets, searchMetadata } = state;
+
+  useEffect(() => {
+    if (!user || savedRef.current) return;
+    savedRef.current = true;
+
+    fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        archetype: archetype?.id ?? null,
+        facts,
+        buckets,
+        thesis,
+        leads,
+        metadata: searchMetadata,
+      }),
+    }).catch(() => {
+      savedRef.current = false;
+    });
+  }, [user, archetype, facts, buckets, thesis, leads, searchMetadata]);
+
+  if (loading) {
+    return (
+      <div className="s7 fade-in">
+        <div className="s7-inner" style={{ textAlign: 'center', padding: 40 }}>
+          <div className="eye">Loading…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <Stage7AuthGate />;
 
   const topLead = leads[0];
   const topName = topLead?.businessName ?? 'your top target';
