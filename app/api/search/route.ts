@@ -4,6 +4,9 @@ import { runSearchPipeline } from '@/lib/pipeline/searchPipeline';
 import { bucketsToCriteria } from '@/lib/pipeline/bucketsToCriteria';
 import type { SearchCriteria } from '@/lib/types';
 
+export const maxDuration = 300;
+export const preferredRegion = 'iad1';
+
 export async function POST(req: Request) {
   const body = await req.json();
 

@@ -1,5 +1,8 @@
 import { jobStore } from '@/lib/pipeline/jobStore';
 
+export const maxDuration = 300;
+export const preferredRegion = 'iad1';
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ jobId: string }> }
