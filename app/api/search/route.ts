@@ -23,6 +23,21 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Missing criteria or buckets+facts' }, { status: 400 });
   }
 
+  // Merge a refine-time override on top of the base thesis criteria.
+  // Shallow merge per top-level group so a partial industry override doesn't
+  // wipe location, etc.
+  if (body.criteriaOverride && typeof body.criteriaOverride === 'object') {
+    const o = body.criteriaOverride as Partial<SearchCriteria>;
+    criteria = {
+      ...criteria,
+      location: { ...criteria.location, ...(o.location ?? {}) },
+      industry: { ...criteria.industry, ...(o.industry ?? {}) },
+      businessSize: { ...criteria.businessSize, ...(o.businessSize ?? {}) },
+      preferences: { ...criteria.preferences, ...(o.preferences ?? {}) },
+      searcherType: o.searcherType ?? criteria.searcherType,
+    };
+  }
+
   if (!criteria.location?.city || !criteria.industry?.primary) {
     return Response.json({ error: 'City and industry are required' }, { status: 400 });
   }

@@ -1,22 +1,50 @@
 'use client';
 
-import type { CSSProperties } from 'react';
-import { useFlow } from './FlowProvider';
-import type { RankedLead } from '@/lib/types';
+import { useState } from 'react';
+import { useFlow, LS_KEY } from './FlowProvider';
+import { useAuth } from '../auth/AuthProvider';
 
 export function Stage6Deliver() {
   const { state, dispatch } = useFlow();
-  const { thesis, leads, searchMetadata, facts, buckets } = state;
+  const { user, loading } = useAuth();
+  const { thesis, facts, buckets, archetype } = state;
+  const [persisting, setPersisting] = useState(false);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
-  const targets = leads.slice(0, 10);
   const disqualifiers = thesis?.disqualifiers?.length
     ? thesis.disqualifiers
     : [buckets.disqualifier || 'Customer concentration above 35%'];
 
-  // Empty state — no search has completed. Happens when the user skipped Stage 5
-  // via Next/Tweaks, refreshed mid-search (FlowProvider clears transient fields),
-  // or the search errored. Thesis may still be populated if /api/thesis succeeded.
-  if (leads.length === 0 && !searchMetadata) {
+  // Authed-user "Save and view" path. Skips /signup since we already have a
+  // session — write the thesis directly to /api/onboard, then jump to /app.
+  const onSaveAndView = async () => {
+    setPersisting(true);
+    setPersistError(null);
+    try {
+      const res = await fetch('/api/onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archetype, facts, buckets, thesis }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      try {
+        localStorage.removeItem(LS_KEY);
+      } catch {
+        // Storage disabled — non-fatal.
+      }
+      window.location.href = '/app';
+    } catch (err) {
+      setPersistError(err instanceof Error ? err.message : 'Failed to save');
+      setPersisting(false);
+    }
+  };
+
+  // Empty state — no thesis yet. Happens when the user skipped Stage 5
+  // via Next/Tweaks, or refreshed mid-generation.
+  if (!thesis) {
     return (
       <div className="s6 fade-in">
         <div style={{ maxWidth: 640, margin: '120px auto', padding: '0 40px', textAlign: 'center' }}>
@@ -25,7 +53,7 @@ export function Stage6Deliver() {
             Nothing to <em>deliver</em> yet.
           </h1>
           <p style={{ fontSize: 16, color: 'var(--ink-70)', lineHeight: 1.6, marginBottom: 32 }}>
-            The search hasn&apos;t run — either you skipped ahead or the page was refreshed mid-generation. Go back to Stage 5 to kick it off.
+            The thesis hasn&apos;t been generated — either you skipped ahead or the page was refreshed mid-generation. Go back to Stage 5 to kick it off.
           </p>
           <button
             onClick={() => dispatch({ type: 'SET_STAGE', stage: 5 })}
@@ -42,17 +70,15 @@ export function Stage6Deliver() {
     );
   }
 
-  const funnelSteps = (() => {
-    const total = searchMetadata?.totalScraped ?? 0;
-    if (total < 50) return null;
-    return [
-      { label: 'Raw universe',            n: total,                                     w: 580 },
-      { label: 'Geo + size filter',       n: Math.round(total * 0.4),                   w: 420 },
-      { label: 'Compliance-driven only',  n: Math.round(total * 0.15),                  w: 240 },
-      { label: 'Succession signal',       n: searchMetadata?.afterFiltering ?? Math.round(total * 0.05), w: 110 },
-      { label: 'Top ten',                 n: Math.min(leads.length, 10),                w: 36 },
-    ];
-  })();
+  const ctaLabel = loading
+    ? 'Loading…'
+    : user
+    ? persisting
+      ? 'Saving…'
+      : 'Save and view your matches →'
+    : 'Create account to unlock your deals →';
+
+  const ctaDisabled = loading || persisting;
 
   return (
     <div className="s6 fade-in">
@@ -61,7 +87,6 @@ export function Stage6Deliver() {
           <div className="dot" />
           <span>
             Delivered · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-            {searchMetadata?.searchDurationSeconds ? ` · ${Math.round(searchMetadata.searchDurationSeconds)} sec` : ''}
           </span>
           <div className="sep" />
           <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.08em' }}>
@@ -69,11 +94,25 @@ export function Stage6Deliver() {
           </span>
         </div>
         <div className="s6-ribbon-actions">
-          <button className="s6-ribbon-btn" onClick={() => {}}>Download PDF</button>
-          <button className="s6-ribbon-btn" onClick={() => {}}>Share</button>
-          <button className="s6-ribbon-btn solid" onClick={() => dispatch({ type: 'SET_STAGE', stage: 7 })}>
-            Finish · go to inbox
-          </button>
+          {user ? (
+            <button
+              type="button"
+              className="s6-ribbon-btn solid"
+              onClick={onSaveAndView}
+              disabled={ctaDisabled}
+              style={{ display: 'inline-flex', alignItems: 'center' }}
+            >
+              {ctaLabel}
+            </button>
+          ) : (
+            <a
+              className="s6-ribbon-btn solid"
+              href="/signup"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+            >
+              Create account to unlock your deals →
+            </a>
+          )}
         </div>
       </div>
 
@@ -81,10 +120,10 @@ export function Stage6Deliver() {
         {/* ACT I — THESIS */}
         <section className="s6-act">
           <div className="s6-act-eye"><span className="sect">§ Act One</span> · The thesis</div>
-          <h1 className="s6-h1">{thesis?.headline || 'Your thesis'}</h1>
+          <h1 className="s6-h1">{thesis.headline || 'Your thesis'}</h1>
 
           <div className="s6-meta-row">
-            <div><div className="lbl">Archetype</div><div className="val">{thesis?.archetypeLabel || buckets.archetype || '—'}</div></div>
+            <div><div className="lbl">Archetype</div><div className="val">{thesis.archetypeLabel || buckets.archetype || '—'}</div></div>
             <div><div className="lbl">Geography</div><div className="val">{(facts.geo || ['Southeast']).slice(0, 2).join(' + ')}</div></div>
             <div><div className="lbl">Check size</div><div className="val">{facts.check || '$3–10M'}</div></div>
             <div><div className="lbl">Horizon</div><div className="val">{facts.horizon || '5–10 yrs'}</div></div>
@@ -92,10 +131,10 @@ export function Stage6Deliver() {
 
           <div className="s6-section">
             <h3>The one paragraph</h3>
-            <p>{thesis?.paragraph || '—'}</p>
+            <p>{thesis.paragraph || '—'}</p>
           </div>
 
-          {thesis?.sharpening && (
+          {thesis.sharpening && (
             <div className="s6-section">
               <h3>Where you sharpened (in session)</h3>
               <p>{thesis.sharpening}</p>
@@ -110,118 +149,54 @@ export function Stage6Deliver() {
           </div>
         </section>
 
-        {/* ACT II — MARKET MAP */}
-        <section className="s6-act">
-          <div className="s6-act-eye"><span className="sect">§ Act Two</span> · The market</div>
+        {/* CTA — replaces Acts II & III */}
+        <section className="s6-act" style={{ textAlign: 'center', paddingTop: 32 }}>
+          <div className="s6-act-eye"><span className="sect">§ Next</span> · Unlock your matches</div>
           <h1 className="s6-h1" style={{ fontSize: 36 }}>
-            {searchMetadata ? `${searchMetadata.totalScraped.toLocaleString()} candidates` : 'Candidates'} <em>narrowed</em> to {targets.length}.
+            {user ? (
+              <>Save your <em>thesis</em> and see what matches.</>
+            ) : (
+              <>Your thesis is the <em>filter</em>. Sign up to see what passes.</>
+            )}
           </h1>
-
-          {funnelSteps ? (
-            <div className="s6-chart-mini">
-              <div className="s6-chart-title">Funnel — how the number became ten</div>
-              <div className="s6-chart-sub">
-                {(facts.geo || ['Southeast']).join(' + ')} · {facts.check || '$3–15M revenue'} · thesis-matched
-              </div>
-              <svg viewBox="0 0 600 140" style={{ width: '100%', height: 140, display: 'block' }}>
-                {funnelSteps.map((s, i) => (
-                  <g key={i} transform={`translate(${(600 - s.w) / 2}, ${i * 24 + 6})`}>
-                    <rect width={s.w} height={18} fill="#0E0E0C" opacity={0.15 + i * 0.14} />
-                    {/* Dark text with paper-colored halo — readable on any bar shade AND on ivory when text overflows a narrow bar. */}
-                    <text x={s.w / 2} y={13} textAnchor="middle"
-                      fill="#0E0E0C"
-                      stroke="#FAF7F0" strokeWidth="3" strokeOpacity="0.85" paintOrder="stroke"
-                      fontFamily="Inter" fontSize="10" fontWeight="600"
-                      letterSpacing="0.06em">
-                      {s.label.toUpperCase()} · {s.n.toLocaleString()}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-              <div className="s6-chart-foot">
-                <span>Source · Searcher AI market model</span>
-                <span>{searchMetadata?.sourcesUsed?.join(' + ')}</span>
-              </div>
-            </div>
+          <p style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink-70)', maxWidth: 580, margin: '20px auto 32px', lineHeight: 1.6 }}>
+            We&apos;ll scan thousands of companies against this thesis and surface the ones worth a Monday call. Your thesis stays saved, your matches stay yours.
+          </p>
+          {user ? (
+            <button
+              type="button"
+              onClick={onSaveAndView}
+              disabled={ctaDisabled}
+              style={{
+                display: 'inline-block',
+                fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',
+                padding: '14px 28px', border: '1px solid var(--ink)',
+                background: 'var(--ink)', color: 'var(--paper)',
+                cursor: ctaDisabled ? 'wait' : 'pointer',
+                opacity: ctaDisabled ? 0.7 : 1,
+              }}
+            >
+              {ctaLabel}
+            </button>
           ) : (
-            <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-70)' }}>
-              Scanned {searchMetadata?.totalScraped ?? 0}, surfaced {targets.length}.
-            </p>
+            <a
+              href="/signup"
+              style={{
+                display: 'inline-block',
+                fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',
+                padding: '14px 28px', border: '1px solid var(--ink)',
+                background: 'var(--ink)', color: 'var(--paper)',
+                textDecoration: 'none', cursor: 'pointer',
+              }}
+            >
+              Create account to unlock your deals →
+            </a>
           )}
-        </section>
-
-        {/* ACT III — TARGETS */}
-        <section className="s6-act">
-          <div className="s6-act-eye"><span className="sect">§ Act Three</span> · The ten</div>
-          <div className="s6-universe-head">
-            <div><h1 className="s6-h1" style={{ fontSize: 36, margin: 0 }}>
-              {targets.length} companies you could <em>call Monday</em>.
-            </h1></div>
-            <div className="helper">
-              Amber scores flag targets worth a second look but with caveats to resolve before outreach.
-            </div>
-          </div>
-
-          <table className="s6-tgt">
-            <thead>
-              <tr>
-                <th style={{ width: 40 }}>#</th>
-                <th>Company</th>
-                <th>Why it fits</th>
-                <th className="num">Revenue / EBITDA</th>
-                <th className="num" style={{ width: 90 }}>Fit score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {targets.map((t, i) => (
-                <TargetRow key={t.id} lead={t} index={i} />
-              ))}
-            </tbody>
-          </table>
+          {persistError && (
+            <p style={{ marginTop: 12, fontSize: 13, color: '#991b1b' }}>{persistError}</p>
+          )}
         </section>
       </div>
     </div>
   );
-}
-
-function TargetRow({ lead, index }: { lead: RankedLead; index: number }) {
-  const cal = lead.matchScore < 80;
-  const warm = !!lead.contact?.linkedin;
-  const rev = lead.businessDetails?.estimatedRevenue ?? '—';
-  const ebitda = estimateEbitda(lead);
-  const loc = [lead.city, lead.state].filter(Boolean).join(', ');
-  return (
-    <tr>
-      <td style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-40)', fontSize: 14, paddingTop: 16 }}>
-        {String(index + 1).padStart(2, '0')}
-      </td>
-      <td>
-        <div className="s6-tgt-name">{lead.businessName}</div>
-        <div className="s6-tgt-loc">
-          {loc}{warm && <span style={{ color: 'var(--emerald)', marginLeft: 8 }}>· warm path</span>}
-        </div>
-      </td>
-      <td><div className="s6-tgt-reason">{lead.matchReason}</div></td>
-      <td className="s6-tgt-rev">
-        {rev} <span className="dim">rev</span><br />
-        {ebitda} <span className="dim">ebitda</span>
-      </td>
-      <td>
-        <div className={`s6-tgt-score ${cal ? 'cal' : ''}`}>
-          <div className="num">{lead.matchScore}</div>
-          <div className="bar" style={{ ['--w' as string]: `${lead.matchScore}%` } as CSSProperties} />
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function estimateEbitda(lead: RankedLead): string {
-  const rev = lead.businessDetails?.estimatedRevenue;
-  if (!rev) return '—';
-  const match = rev.match(/\$?([\d.]+)\s*M/i);
-  if (!match) return '—';
-  const revM = parseFloat(match[1]);
-  const ebitdaM = Math.round(revM * 0.18 * 10) / 10;
-  return `$${ebitdaM}M`;
 }

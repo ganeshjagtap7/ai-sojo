@@ -1,18 +1,21 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { login } from '@/app/auth/actions';
+import { sendMagicLink, signInWithGoogle } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; next?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect('/');
+  const { error, message, next } = await searchParams;
 
-  const { error, message } = await searchParams;
+  if (user) redirect(next ?? '/app');
+
+  // Returning users skip the onboarding handoff and go straight to /app.
+  const nextPath = next ?? '/app';
 
   return (
     <main style={styles.main}>
@@ -24,18 +27,41 @@ export default async function LoginPage({
             Create an account
           </Link>
         </p>
+
         {message && <p style={styles.info}>{message}</p>}
         {error && <p style={styles.error}>{error}</p>}
-        <form action={login} style={styles.form}>
+
+        <form action={signInWithGoogle} style={styles.form}>
+          <input type="hidden" name="next" value={nextPath} />
+          <input type="hidden" name="intent" value="login" />
+          <button type="submit" style={styles.googleBtn}>
+            Continue with Google
+          </button>
+        </form>
+
+        <div style={styles.divider}>
+          <span style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <span style={styles.dividerLine} />
+        </div>
+
+        <form action={sendMagicLink} style={styles.form}>
+          <input type="hidden" name="next" value={nextPath} />
+          <input type="hidden" name="intent" value="login" />
           <label style={styles.label}>
             Email
-            <input type="email" name="email" required autoComplete="email" style={styles.input} />
+            <input
+              type="email"
+              name="email"
+              required
+              autoComplete="email"
+              style={styles.input}
+              placeholder="you@example.com"
+            />
           </label>
-          <label style={styles.label}>
-            Password
-            <input type="password" name="password" required autoComplete="current-password" style={styles.input} />
-          </label>
-          <button type="submit" style={styles.button}>Sign in</button>
+          <button type="submit" style={styles.button}>
+            Email me a sign-in link
+          </button>
         </form>
       </div>
     </main>
@@ -44,7 +70,7 @@ export default async function LoginPage({
 
 const styles: Record<string, React.CSSProperties> = {
   main: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem', fontFamily: 'var(--font-inter)' },
-  card: { width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: '1.25rem' },
+  card: { width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: '1rem' },
   heading: { fontSize: 24, fontWeight: 600, margin: 0 },
   sub: { fontSize: 14, color: '#555', margin: 0 },
   link: { textDecoration: 'underline', color: 'inherit' },
@@ -54,4 +80,8 @@ const styles: Record<string, React.CSSProperties> = {
   label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 500 },
   input: { padding: '0.5rem 0.75rem', fontSize: 14, borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'inherit' },
   button: { padding: '0.625rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' },
+  googleBtn: { padding: '0.625rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#fff', color: '#111', border: '1px solid #d1d5db', cursor: 'pointer' },
+  divider: { display: 'flex', alignItems: 'center', gap: 12 },
+  dividerLine: { flex: 1, height: 1, background: '#e5e7eb' },
+  dividerText: { fontSize: 12, color: '#6b7280' },
 };

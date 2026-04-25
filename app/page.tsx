@@ -10,7 +10,6 @@ import { Stage3Converse } from './_components/flow/Stage3Converse';
 import { Stage4Confirm } from './_components/flow/Stage4Confirm';
 import { Stage5Generate } from './_components/flow/Stage5Generate';
 import { Stage6Deliver } from './_components/flow/Stage6Deliver';
-import { Stage7After } from './_components/flow/Stage7After';
 import { TweaksPanel } from './_components/flow/TweaksPanel';
 
 function StageRouter() {
@@ -23,7 +22,6 @@ function StageRouter() {
     case 4: return <Stage4Confirm />;
     case 5: return <Stage5Generate />;
     case 6: return <Stage6Deliver />;
-    case 7: return <Stage7After />;
     default: return null;
   }
 }

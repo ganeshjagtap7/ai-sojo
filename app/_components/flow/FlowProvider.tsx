@@ -22,7 +22,7 @@ function resetTransient(s: FlowState): FlowState {
 function sanitize(parsed: unknown): FlowState {
   if (!parsed || typeof parsed !== 'object') return INITIAL_STATE;
   const p = parsed as Partial<FlowState>;
-  const stageNum = typeof p.stage === 'number' ? Math.max(0, Math.min(7, p.stage)) : 0;
+  const stageNum = typeof p.stage === 'number' ? Math.max(0, Math.min(6, p.stage)) : 0;
   return {
     ...INITIAL_STATE,
     ...p,

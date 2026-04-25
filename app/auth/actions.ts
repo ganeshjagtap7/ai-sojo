@@ -5,47 +5,67 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
-export async function login(formData: FormData) {
-  const email = String(formData.get('email') ?? '');
-  const password = String(formData.get('password') ?? '');
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
-  }
-
-  revalidatePath('/', 'layout');
-  redirect('/');
+async function getOrigin(): Promise<string> {
+  const h = await headers();
+  const origin = h.get('origin');
+  if (origin) return origin;
+  const host = h.get('x-forwarded-host') ?? h.get('host');
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  return host ? `${proto}://${host}` : '';
 }
 
-export async function signup(formData: FormData) {
-  const email = String(formData.get('email') ?? '');
-  const password = String(formData.get('password') ?? '');
+// Magic-link signup/login. Single action — Supabase creates the user on first
+// click of the link if they don't exist yet. `next` is where the user lands
+// after the auth/callback PKCE exchange.
+export async function sendMagicLink(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim();
+  const next = String(formData.get('next') ?? '/app/onboarding');
+  const intent = String(formData.get('intent') ?? 'signup'); // 'signup' | 'login'
+
+  if (!email) {
+    redirect(`/${intent}?error=${encodeURIComponent('Email is required')}`);
+  }
 
   const supabase = await createClient();
-  const headerStore = await headers();
-  const origin = headerStore.get('origin') ?? `https://${headerStore.get('x-forwarded-host') ?? ''}`;
+  const origin = await getOrigin();
+  const emailRedirectTo = origin
+    ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+    : undefined;
 
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signInWithOtp({
     email,
-    password,
-    options: {
-      emailRedirectTo: origin ? `${origin}/auth/callback` : undefined,
-    },
+    options: { emailRedirectTo },
   });
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    redirect(`/${intent}?error=${encodeURIComponent(error.message)}`);
   }
 
-  if (!data.session) {
-    redirect('/login?message=Check%20your%20email%20to%20confirm%20your%20account');
+  redirect(`/${intent}?message=${encodeURIComponent('Check your email for the sign-in link.')}`);
+}
+
+// Google OAuth. Returns a URL the user must be redirected to; we issue the
+// redirect server-side so the client doesn't need any extra wiring.
+export async function signInWithGoogle(formData: FormData) {
+  const next = String(formData.get('next') ?? '/app/onboarding');
+  const intent = String(formData.get('intent') ?? 'signup');
+
+  const supabase = await createClient();
+  const origin = await getOrigin();
+  const redirectTo = origin
+    ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+    : undefined;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo },
+  });
+
+  if (error || !data?.url) {
+    redirect(`/${intent}?error=${encodeURIComponent(error?.message ?? 'Google sign-in failed')}`);
   }
 
-  revalidatePath('/', 'layout');
-  redirect('/');
+  redirect(data.url);
 }
 
 export async function logout() {

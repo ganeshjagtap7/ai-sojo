@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useFlow } from './FlowProvider';
 
-const STAGE_IDS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
+const STAGE_IDS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 export function TweaksPanel() {
   const { state, dispatch } = useFlow();

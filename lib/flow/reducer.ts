@@ -1,6 +1,6 @@
 import { FlowState, FlowAction, INITIAL_STATE, Stage } from './types';
 
-const clampStage = (n: number): Stage => Math.max(0, Math.min(7, n)) as Stage;
+const clampStage = (n: number): Stage => Math.max(0, Math.min(6, n)) as Stage;
 
 export function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {

@@ -49,7 +49,7 @@ export interface SearchMetadataLite {
   searchDurationSeconds: number;
 }
 
-export type Stage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type Stage = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface FlowState {
   stage: Stage;

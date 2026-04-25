@@ -12,7 +12,6 @@ const STAGES = [
   { id: 4, label: '04 · Confirm' },
   { id: 5, label: '05 · Generate' },
   { id: 6, label: '06 · Deliver' },
-  { id: 7, label: '07 · After' },
 ] as const;
 
 const ARCHETYPE_LABELS: Record<string, string> = {
@@ -28,7 +27,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const { stage, archetype } = state;
 
-  const go = (n: number) => dispatch({ type: 'SET_STAGE', stage: Math.max(0, Math.min(7, n)) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 });
+  const go = (n: number) => dispatch({ type: 'SET_STAGE', stage: Math.max(0, Math.min(6, n)) as 0 | 1 | 2 | 3 | 4 | 5 | 6 });
   const restart = () => dispatch({ type: 'RESTART' });
 
   return (
@@ -77,7 +76,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
         <div className="shell-foot-nav">
           <button onClick={() => go(stage - 1)} disabled={stage === 0}>← Prev</button>
-          <button onClick={() => go(stage + 1)} disabled={stage === 7}>Next →</button>
+          <button onClick={() => go(stage + 1)} disabled={stage === 6}>Next →</button>
         </div>
       </footer>
     </div>
