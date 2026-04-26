@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useTransition, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { RankedLead, SearchCriteria, SearchMetadata } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
 import { ResultCard } from './ResultCard';
-import { Sidebar } from './Sidebar';
+import { LeadDrawer } from './LeadDrawer';
+import { ToastStack, useToasts } from './ToastStack';
 
 export interface WorkspaceThesis {
   id: string;
@@ -32,22 +34,31 @@ interface Props {
 }
 
 type ScreenState =
-  | { kind: 'initial-loading'; message: string }
+  | { kind: 'initial-loading' }
   | { kind: 'idle' }
-  | { kind: 'running'; message: string }
+  | { kind: 'running'; label: string }
   | { kind: 'failed'; error: string };
 
-export function Workspace({ thesis, searches, activeSearch, savedLeadIds }: Props) {
+type FilterTab = 'all' | 'top' | 'saved';
+
+export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initialSavedIds }: Props) {
   const router = useRouter();
-  const [refining, setRefining] = useState(false);
-  const [pendingNewSearch, startNewSearch] = useTransition();
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts();
   const [screen, setScreen] = useState<ScreenState>(() =>
     !activeSearch && searches.length === 0
-      ? { kind: 'initial-loading', message: 'Finding your 10 matches…' }
+      ? { kind: 'initial-loading' }
       : activeSearch?.status === 'running'
-      ? { kind: 'running', message: 'Search in progress…' }
+      ? { kind: 'running', label: 'Search in progress…' }
       : { kind: 'idle' },
   );
+  const [filter, setFilter] = useState<FilterTab>('all');
+  const [savedSet, setSavedSet] = useState<Set<string>>(() => new Set(initialSavedIds));
+  const [drawerLead, setDrawerLead] = useState<RankedLead | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [refineQuery, setRefineQuery] = useState('');
+  const [refining, setRefining] = useState(false);
+  const [parsed, setParsed] = useState<{ criteria: Partial<SearchCriteria>; summary: string } | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
   const kickedRef = useRef(false);
 
   // Auto-kick the initial search if the user has a thesis but no searches.
@@ -60,10 +71,9 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds }: Prop
   }, []);
 
   async function runSearch(input: { query: string | null; criteriaOverride: Partial<SearchCriteria> | null }) {
-    setScreen({ kind: 'running', message: input.query ? `Searching "${input.query}"…` : 'Finding your 10 matches…' });
+    setScreen({ kind: 'running', label: input.query ? `Searching · ${input.query}` : 'Finding your matches…' });
 
     try {
-      // Kick off the search pipeline.
       const startRes = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,15 +85,10 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds }: Prop
         }),
       });
       const startJson = await startRes.json();
-      if (!startRes.ok || !startJson.jobId) {
-        throw new Error(startJson.error ?? 'Failed to start search');
-      }
-      const jobId = startJson.jobId as string;
+      if (!startRes.ok || !startJson.jobId) throw new Error(startJson.error ?? 'Failed to start search');
 
-      // Poll status.
-      const completed = await pollUntilDone(jobId);
+      const completed = await pollUntilDone(startJson.jobId as string);
 
-      // Persist to DB.
       const persistRes = await fetch('/api/app/searches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,79 +101,282 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds }: Prop
         }),
       });
       const persistJson = await persistRes.json();
-      if (!persistRes.ok || !persistJson.searchId) {
-        throw new Error(persistJson.error ?? 'Failed to persist search');
-      }
+      if (!persistRes.ok || !persistJson.searchId) throw new Error(persistJson.error ?? 'Failed to persist search');
 
-      // Navigate to the new search tab and refresh server data.
       router.replace(`/app?search=${persistJson.searchId}`);
       router.refresh();
       setScreen({ kind: 'idle' });
+      pushToast('Search complete', `${completed.leads.length} leads ranked`);
     } catch (err) {
       setScreen({ kind: 'failed', error: err instanceof Error ? err.message : 'Search failed' });
     }
   }
 
-  function handleRefineSubmit(input: { query: string; criteria: Partial<SearchCriteria> }) {
-    setRefining(false);
-    startNewSearch(() => {
-      runSearch({ query: input.query, criteriaOverride: input.criteria });
-    });
+  async function onSubmitRefine() {
+    const q = refineQuery.trim();
+    if (!q || refining) return;
+    setRefining(true);
+    setParseError(null);
+    setParsed(null);
+    try {
+      const res = await fetch('/api/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, thesis: { facts: thesis.facts, buckets: thesis.buckets } }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Refine failed');
+      if (!json.criteria || Object.keys(json.criteria).length === 0) {
+        throw new Error("We couldn't extract criteria — try rephrasing.");
+      }
+      setParsed({ criteria: json.criteria, summary: json.summary ?? 'Parsed' });
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : 'Refine failed');
+    } finally {
+      setRefining(false);
+    }
   }
 
-  const leads = activeSearch?.leads ?? [];
-  const showResults = screen.kind === 'idle' && leads.length > 0;
+  async function onConfirmRefine() {
+    if (!parsed) return;
+    const q = refineQuery.trim();
+    setRefineQuery('');
+    setParsed(null);
+    await runSearch({ query: q, criteriaOverride: parsed.criteria });
+  }
+
+  async function onSaveToggle(lead: RankedLead, nextSaved: boolean) {
+    if (nextSaved) {
+      const res = await fetch('/api/app/saved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead, searchId: activeSearch?.id ?? null }),
+      });
+      if (res.ok) {
+        setSavedSet((s) => new Set([...s, lead.id]));
+        router.refresh();
+      }
+    } else {
+      const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(lead.id)}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSavedSet((s) => {
+          const next = new Set(s);
+          next.delete(lead.id);
+          return next;
+        });
+        router.refresh();
+      }
+    }
+  }
+
+  const allLeads = activeSearch?.leads ?? [];
+  const filtered = filter === 'top'
+    ? allLeads.filter((l) => l.matchScore >= 85)
+    : filter === 'saved'
+    ? allLeads.filter((l) => savedSet.has(l.id))
+    : allLeads;
+
+  const showResults = screen.kind === 'idle' && allLeads.length > 0;
+  const queryDescription = activeSearch?.query
+    ? activeSearch.query
+    : thesisOneLiner(thesis);
+  const titleParts = thesisTitleParts(thesis, activeSearch);
 
   return (
-    <div style={styles.layout}>
-      <Sidebar
-        thesis={thesis}
-        searches={searches}
-        activeSearchId={activeSearch?.id ?? null}
-        savedCount={savedLeadIds.length}
-      />
+    <div className="view active">
+      <div className="results-wrap">
+        <header className="results-head">
+          <div className="results-head-left">
+            <div className="results-head-title">
+              <span>
+                {activeSearch ? `Found ` : `Searching for `}
+                <em>
+                  {titleParts.industry}
+                  {titleParts.where ? ` in ${titleParts.where}` : ''}
+                </em>
+                .
+              </span>
+            </div>
+            <div className="results-head-meta">
+              <span>{searches.length} {searches.length === 1 ? 'search' : 'searches'}</span>
+              {activeSearch && (
+                <>
+                  <span className="sep">·</span>
+                  <span>ranked by match</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="results-head-actions">
+            <Link href="/app/history" className="btn-secondary">History</Link>
+            <Link href="/app/saved" className="btn-secondary">Saved</Link>
+          </div>
+        </header>
 
-      <main style={styles.main}>
-        <RefineBar
-          thesis={thesis}
-          disabled={pendingNewSearch || screen.kind === 'running' || screen.kind === 'initial-loading'}
-          refining={refining}
-          setRefining={setRefining}
-          onSubmit={handleRefineSubmit}
-        />
-
-        {screen.kind === 'initial-loading' && <LoadingPanel message={screen.message} variant="initial" />}
-        {screen.kind === 'running' && <LoadingPanel message={screen.message} variant="refine" />}
-        {screen.kind === 'failed' && <ErrorPanel error={screen.error} onRetry={() => runSearch({ query: null, criteriaOverride: null })} />}
-
-        {showResults && (
-          <section style={styles.results}>
-            <header style={styles.resultsHead}>
-              <h2 style={styles.resultsTitle}>
-                {activeSearch?.query
-                  ? `Refined · ${activeSearch.query}`
-                  : `Your ${leads.length} matches for ${thesisHeadline(thesis)}`}
-              </h2>
-              <span style={styles.resultsCount}>{leads.length} leads</span>
-            </header>
-            <div style={styles.cards}>
-              {leads.map((lead, i) => (
-                <ResultCard
-                  key={lead.id ?? i}
-                  lead={lead}
-                  rank={i + 1}
-                  searchId={activeSearch?.id ?? null}
-                  initialSaved={savedLeadIds.includes(lead.id)}
-                />
+        {searches.length > 0 && (
+          <div className="results-toolbar">
+            <div className="filters">
+              <button
+                type="button"
+                className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
+                onClick={() => setFilter('all')}
+              >
+                All <span className="count">{allLeads.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`filter-tab ${filter === 'top' ? 'active' : ''}`}
+                onClick={() => setFilter('top')}
+              >
+                Top matches <span className="count">{allLeads.filter((l) => l.matchScore >= 85).length}</span>
+              </button>
+              <button
+                type="button"
+                className={`filter-tab ${filter === 'saved' ? 'active' : ''}`}
+                onClick={() => setFilter('saved')}
+              >
+                Saved <span className="count">{allLeads.filter((l) => savedSet.has(l.id)).length}</span>
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {searches.map((s, i) => (
+                <Link
+                  key={s.id}
+                  href={`/app?search=${s.id}`}
+                  className={`filter-tab ${activeSearch?.id === s.id ? 'active' : ''}`}
+                  title={s.query ?? 'Initial search'}
+                >
+                  {s.query ? (s.query.length > 24 ? s.query.slice(0, 24) + '…' : s.query) : `v${searches.length - i}`}
+                </Link>
               ))}
             </div>
-          </section>
+          </div>
         )}
 
-        {screen.kind === 'idle' && leads.length === 0 && activeSearch && (
-          <div style={styles.empty}>No leads in this search.</div>
+        <div className="results-body">
+          {screen.kind === 'initial-loading' && <SearchingPanel label="Finding your matches" sub="Scanning Google Maps, BBB, and the open web. Usually takes 15–60 seconds." />}
+          {screen.kind === 'running' && <SearchingPanel label={screen.label} sub="Re-ranking against your refinement." />}
+          {screen.kind === 'failed' && (
+            <div className="searching">
+              <h2 className="searching-title">Search <em>failed</em>.</h2>
+              <p className="searching-sub">{screen.error}</p>
+              <button className="btn-primary" type="button" onClick={() => runSearch({ query: null, criteriaOverride: null })}>
+                Try again
+              </button>
+            </div>
+          )}
+
+          {showResults && (
+            <>
+              <div className="query-strip">
+                <div className="text">
+                  Search · <em>{queryDescription}</em>
+                </div>
+                <div className="meta">
+                  <span className="version">v{searches.findIndex((s) => s.id === activeSearch?.id) >= 0 ? searches.length - searches.findIndex((s) => s.id === activeSearch?.id) : 1}</span>
+                  <span className="ok">● complete</span>
+                  <span className="sep">·</span>
+                  <span>{filtered.length}/{allLeads.length}</span>
+                </div>
+              </div>
+
+              <div className="results-grid">
+                {filtered.map((lead, i) => (
+                  <ResultCard
+                    key={lead.id ?? i}
+                    lead={lead}
+                    rank={allLeads.indexOf(lead) + 1}
+                    searchId={activeSearch?.id ?? null}
+                    initialSaved={savedSet.has(lead.id)}
+                    onOpen={(l) => {
+                      setDrawerLead(l);
+                      setDrawerOpen(true);
+                    }}
+                    onSaveToggle={onSaveToggle}
+                    toast={pushToast}
+                  />
+                ))}
+                {filtered.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)', fontSize: 14 }}>
+                    {filter === 'top' ? 'No matches scored ≥ 85 in this search.' : filter === 'saved' ? 'You haven\'t saved any of these leads.' : 'No leads in this search.'}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {searches.length > 0 && screen.kind !== 'running' && screen.kind !== 'initial-loading' && (
+          <div className="refine-dock">
+            <div className="refine-composer">
+              <div className="refine-head">
+                <div className="refine-title">
+                  Sojo · <em>refine your search</em>
+                </div>
+              </div>
+              {parsed && (
+                <div style={{ padding: '8px 0', borderTop: '1px solid var(--hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ink)' }}>
+                    We read that as: <strong>{parsed.summary}</strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="btn-secondary" onClick={() => { setParsed(null); }}>
+                      Cancel
+                    </button>
+                    <button type="button" className="btn-primary" onClick={onConfirmRefine}>
+                      Run search
+                    </button>
+                  </div>
+                </div>
+              )}
+              {parseError && (
+                <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--danger)' }}>{parseError}</div>
+              )}
+              {!parsed && (
+                <div className="refine-input-row">
+                  <input
+                    type="text"
+                    value={refineQuery}
+                    onChange={(e) => setRefineQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onSubmitRefine();
+                      }
+                    }}
+                    placeholder='Describe the change in plain English — e.g. "HVAC in Atlanta under $5M rev"'
+                    disabled={refining}
+                  />
+                  <button type="button" className="send-btn" onClick={onSubmitRefine} disabled={refining || !refineQuery.trim()}>
+                    {refining ? (
+                      <div className="plog-spin" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M7 17L17 7M8 7h9v9" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
-      </main>
+      </div>
+
+      <LeadDrawer
+        lead={drawerLead}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        isSaved={drawerLead ? savedSet.has(drawerLead.id) : false}
+        onSave={async () => {
+          if (!drawerLead) return;
+          const next = !savedSet.has(drawerLead.id);
+          await onSaveToggle(drawerLead, next);
+          pushToast(next ? 'Saved' : 'Removed from saved', drawerLead.businessName);
+        }}
+      />
+
+      <ToastStack toasts={toasts} dismiss={dismissToast} />
     </div>
   );
 }
@@ -193,179 +401,38 @@ async function pollUntilDone(jobId: string): Promise<{ leads: RankedLead[]; meta
   throw new Error('Search timed out');
 }
 
-function thesisHeadline(thesis: WorkspaceThesis): string {
+function SearchingPanel({ label, sub }: { label: string; sub: string }) {
+  return (
+    <div className="searching">
+      <h1 className="searching-title">
+        {label.includes('·') ? label.split('·').slice(0, 1).join('') : 'Searching for '}
+        <em>{label.includes('·') ? label.split('·').slice(1).join('·').trim() : 'matches'}</em>
+        .
+      </h1>
+      <p className="searching-sub">{sub}</p>
+      <div className="sketch-count">
+        <div className="n">
+          <span className="plog-spin" style={{ width: 24, height: 24, borderWidth: 2 }} />
+        </div>
+        <div className="l">running</div>
+      </div>
+    </div>
+  );
+}
+
+function thesisOneLiner(thesis: WorkspaceThesis): string {
   const parts: string[] = [];
   if (thesis.buckets?.archetype) parts.push(thesis.buckets.archetype);
   if (thesis.facts?.geo?.[0]) parts.push(thesis.facts.geo[0]);
   if (thesis.facts?.check) parts.push(thesis.facts.check);
-  return `"${parts.join(' · ') || 'your thesis'}"`;
+  return parts.join(' · ') || 'your thesis';
 }
 
-function RefineBar({
-  thesis,
-  disabled,
-  refining,
-  setRefining,
-  onSubmit,
-}: {
-  thesis: WorkspaceThesis;
-  disabled: boolean;
-  refining: boolean;
-  setRefining: (v: boolean) => void;
-  onSubmit: (input: { query: string; criteria: Partial<SearchCriteria> }) => void;
-}) {
-  const [query, setQuery] = useState('');
-  const [parsed, setParsed] = useState<{ criteria: Partial<SearchCriteria>; summary: string } | null>(null);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const [parsing, setParsing] = useState(false);
-
-  async function onEnter() {
-    if (!query.trim() || disabled || parsing) return;
-    setParsing(true);
-    setParseError(null);
-    setParsed(null);
-    try {
-      const res = await fetch('/api/refine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, thesis: { facts: thesis.facts, buckets: thesis.buckets } }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Refine failed');
-      if (!json.criteria || Object.keys(json.criteria).length === 0) {
-        throw new Error("We couldn't extract criteria — try rephrasing.");
-      }
-      setParsed({ criteria: json.criteria, summary: json.summary ?? 'Parsed' });
-      setRefining(true);
-    } catch (err) {
-      setParseError(err instanceof Error ? err.message : 'Refine failed');
-    } finally {
-      setParsing(false);
-    }
+function thesisTitleParts(thesis: WorkspaceThesis, activeSearch: SearchSummary | null) {
+  const industry = thesis.buckets?.opening || thesis.buckets?.archetype || 'matches';
+  const where = thesis.facts?.geo?.[0] ?? null;
+  if (activeSearch?.query) {
+    return { industry: activeSearch.query, where: null };
   }
-
-  return (
-    <div style={styles.refineWrap}>
-      <input
-        type="search"
-        value={query}
-        disabled={disabled}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            onEnter();
-          }
-        }}
-        placeholder="Refine your search — e.g. &quot;HVAC in Atlanta under $5M rev&quot;"
-        style={styles.refineInput}
-      />
-      {parsing && <div style={styles.refineHint}>Parsing…</div>}
-      {parseError && <div style={styles.refineError}>{parseError}</div>}
-      {parsed && refining && (
-        <div style={styles.confirmBox}>
-          <div style={styles.confirmText}>
-            We read that as: <strong>{parsed.summary}</strong>
-          </div>
-          <div style={styles.confirmActions}>
-            <button
-              type="button"
-              style={styles.confirmCancel}
-              onClick={() => {
-                setRefining(false);
-                setParsed(null);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              style={styles.confirmGo}
-              onClick={() => {
-                onSubmit({ query, criteria: parsed.criteria });
-                setQuery('');
-                setParsed(null);
-              }}
-            >
-              Run search
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return { industry, where };
 }
-
-function LoadingPanel({ message, variant }: { message: string; variant: 'initial' | 'refine' }) {
-  return (
-    <div style={styles.loading}>
-      <div style={styles.spinner} />
-      <h2 style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>{message}</h2>
-      <p style={{ fontSize: 13, color: '#6b7280', margin: 0, maxWidth: 420, textAlign: 'center' }}>
-        {variant === 'initial'
-          ? 'Scanning Google Maps, BBB, and the open web for businesses that match your thesis. This usually takes 15–30 seconds.'
-          : 'Re-running with your refinement. Hold tight.'}
-      </p>
-    </div>
-  );
-}
-
-function ErrorPanel({ error, onRetry }: { error: string; onRetry: () => void }) {
-  return (
-    <div style={styles.errorPanel}>
-      <h2 style={{ fontSize: 18, margin: 0 }}>Search failed</h2>
-      <p style={{ fontSize: 13, color: '#991b1b', margin: 0 }}>{error}</p>
-      <button type="button" style={styles.retryBtn} onClick={onRetry}>
-        Try again
-      </button>
-    </div>
-  );
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'grid', gridTemplateColumns: '260px 1fr', flex: 1, minHeight: 'calc(100vh - 52px)' },
-  main: { padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 },
-  refineWrap: { display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' },
-  refineInput: {
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: 15,
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    background: '#fff',
-    fontFamily: 'inherit',
-  },
-  refineHint: { fontSize: 12, color: '#6b7280' },
-  refineError: { fontSize: 12, color: '#991b1b' },
-  confirmBox: {
-    background: '#fff',
-    border: '1px solid #e5e0d3',
-    borderRadius: 8,
-    padding: 12,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  confirmText: { fontSize: 13, color: '#374151' },
-  confirmActions: { display: 'flex', gap: 8 },
-  confirmCancel: { padding: '6px 12px', fontSize: 12, border: '1px solid #d1d5db', background: '#fff', borderRadius: 4, cursor: 'pointer' },
-  confirmGo: { padding: '6px 12px', fontSize: 12, border: '1px solid #0E0E0C', background: '#0E0E0C', color: '#fff', borderRadius: 4, cursor: 'pointer' },
-  results: { display: 'flex', flexDirection: 'column', gap: 14 },
-  resultsHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' },
-  resultsTitle: { fontSize: 18, fontWeight: 500, margin: 0 },
-  resultsCount: { fontSize: 12, color: '#6b7280' },
-  cards: { display: 'flex', flexDirection: 'column', gap: 12 },
-  empty: { fontSize: 14, color: '#6b7280', textAlign: 'center', padding: 60 },
-  loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '60px 24px' },
-  errorPanel: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: 32, border: '1px solid #fca5a5', borderRadius: 8, background: '#fef2f2' },
-  retryBtn: { padding: '8px 14px', fontSize: 13, border: '1px solid #0E0E0C', background: '#0E0E0C', color: '#fff', borderRadius: 4, cursor: 'pointer' },
-  spinner: {
-    width: 28,
-    height: 28,
-    border: '3px solid #e5e7eb',
-    borderTopColor: '#0E0E0C',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  },
-};

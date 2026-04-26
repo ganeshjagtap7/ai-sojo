@@ -1,10 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RankedLead } from '@/lib/types';
-import { tierOf, locLine, industryOf } from '@/app/app/_lib/leadScoring';
+import { tierOf, locLine } from '@/app/app/_lib/leadScoring';
 
 const STAGES = ['New', 'Outreach', 'Discovery', 'LOI sent', 'Passed'] as const;
 type Stage = (typeof STAGES)[number];
@@ -16,45 +15,66 @@ export interface SavedRow {
   savedAt: string;
 }
 
-const TIER_COLOR: Record<'a' | 'b' | 'c', string> = {
-  a: '#16a34a',
-  b: '#d97706',
-  c: '#6b7280',
+const STAGE_COLOR: Record<string, string> = {
+  New: 'var(--muted)',
+  Outreach: 'var(--accent-deep)',
+  Discovery: 'var(--accent)',
+  'LOI sent': 'var(--success)',
+  Passed: 'var(--faint)',
+};
+
+const fmtAgo = (iso: string) => {
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const days = Math.floor(h / 24);
+  return `${days}d`;
 };
 
 export function SavedView({ rows }: { rows: SavedRow[] }) {
   return (
-    <div style={styles.layout}>
-      <aside style={styles.aside}>
-        <Link href="/app" style={styles.backLink}>← Back to workspace</Link>
-        <div style={styles.eyebrow}>Saved leads</div>
-        <div style={styles.count}>{rows.length} total</div>
-      </aside>
-      <main style={styles.main}>
-        {rows.length === 0 && <div style={styles.empty}>Save leads from the workspace to track outreach here.</div>}
-        {STAGES.map((stage) => {
-          const inStage = rows.filter((r) => r.stage === stage);
-          if (inStage.length === 0) return null;
-          return (
-            <section key={stage} style={styles.section}>
-              <header style={styles.sectionHead}>
-                <h2 style={styles.sectionTitle}>{stage}</h2>
-                <span style={styles.sectionCount}>{inStage.length}</span>
-              </header>
-              <div style={styles.cards}>
-                {inStage.map((row) => (
-                  <SavedCard key={row.id} row={row} />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </main>
+    <div className="simple-page">
+      <div className="simple-head">
+        <div>
+          <h1>
+            Your <em>saved</em> leads.
+          </h1>
+          <div className="sub">
+            {rows.length === 0
+              ? 'Save leads from search results to track outreach here.'
+              : `${rows.length} ${rows.length === 1 ? 'business' : 'businesses'} · last added ${rows[0] ? fmtAgo(rows[0].savedAt) : ''} ago`}
+          </div>
+        </div>
+      </div>
+
+      {rows.length === 0 ? null : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Business</th>
+              <th>Location</th>
+              <th className="num">Revenue</th>
+              <th className="num">Match</th>
+              <th>Stage</th>
+              <th className="num">Saved</th>
+              <th style={{ width: 60 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <SavedRowEl key={row.id} row={row} />
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
 
-function SavedCard({ row }: { row: SavedRow }) {
+function SavedRowEl({ row }: { row: SavedRow }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +90,7 @@ function SavedCard({ row }: { row: SavedRow }) {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        setError(j.error ?? 'Failed');
+        setError(j.error ?? 'Update failed');
         return;
       }
       router.refresh();
@@ -86,55 +106,43 @@ function SavedCard({ row }: { row: SavedRow }) {
   };
 
   return (
-    <article style={styles.card}>
-      <div style={styles.cardHead}>
-        <div>
-          <h3 style={styles.cardName}>{row.lead.businessName}</h3>
-          <div style={styles.cardMeta}>
-            {industryOf(row.lead)} · {locLine(row.lead) || '—'}
-          </div>
-        </div>
-        <div style={{ ...styles.score, color: TIER_COLOR[tier] }}>{row.lead.matchScore}</div>
-      </div>
-      <div style={styles.cardActions}>
+    <tr style={pending ? { opacity: 0.5 } : undefined}>
+      <td style={{ fontWeight: 500 }}>{row.lead.businessName}</td>
+      <td style={{ color: 'var(--muted)' }}>{locLine(row.lead) || '—'}</td>
+      <td className="num">{row.lead.businessDetails?.estimatedRevenue ?? '—'}</td>
+      <td className="num">
+        <span className={`score-pill ${tier}`}>{row.lead.matchScore}</span>
+      </td>
+      <td>
         <select
+          className="stage-select"
           value={row.stage}
-          disabled={pending}
           onChange={(e) => updateStage(e.target.value as Stage)}
-          style={styles.stageSelect}
+          disabled={pending}
+          style={{ color: STAGE_COLOR[row.stage] ?? 'inherit' }}
         >
           {STAGES.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
-        <button type="button" style={styles.unsave} onClick={unsave} disabled={pending}>
-          Unsave
+        {error && <div style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</div>}
+      </td>
+      <td className="num" style={{ color: 'var(--faint)' }}>{fmtAgo(row.savedAt)}</td>
+      <td>
+        <button
+          type="button"
+          className="ctrl-btn"
+          onClick={unsave}
+          disabled={pending}
+          title="Remove from saved"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          </svg>
         </button>
-      </div>
-      {error && <div style={{ fontSize: 11, color: '#991b1b' }}>{error}</div>}
-    </article>
+      </td>
+    </tr>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'grid', gridTemplateColumns: '260px 1fr', minHeight: 'calc(100vh - 52px)' },
-  aside: { borderRight: '1px solid #e5e0d3', padding: 16, background: '#fff', display: 'flex', flexDirection: 'column', gap: 6 },
-  backLink: { fontSize: 12, color: '#374151', textDecoration: 'none', marginBottom: 12 },
-  eyebrow: { fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9ca3af' },
-  count: { fontSize: 14, fontWeight: 500 },
-  main: { padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 },
-  empty: { fontSize: 14, color: '#6b7280', textAlign: 'center', padding: 60 },
-  section: { display: 'flex', flexDirection: 'column', gap: 10 },
-  sectionHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' },
-  sectionTitle: { fontSize: 16, fontWeight: 500, margin: 0 },
-  sectionCount: { fontSize: 11, color: '#6b7280' },
-  cards: { display: 'flex', flexDirection: 'column', gap: 8 },
-  card: { background: '#fff', border: '1px solid #e5e0d3', borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 },
-  cardHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  cardName: { fontSize: 15, fontWeight: 600, margin: 0 },
-  cardMeta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  score: { fontSize: 20, fontWeight: 700 },
-  cardActions: { display: 'flex', gap: 8, alignItems: 'center' },
-  stageSelect: { fontSize: 12, padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff' },
-  unsave: { fontSize: 12, padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', cursor: 'pointer' },
-};

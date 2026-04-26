@@ -1,148 +1,201 @@
 'use client';
 
 import type { RankedLead } from '@/lib/types';
-import { tierOf, subScoresFor, locLine, industryOf, barCls, type Tier } from '@/app/app/_lib/leadScoring';
-import { SaveButton } from './SaveButton';
-
-const TIER_COLOR: Record<Tier, string> = {
-  a: '#16a34a',
-  b: '#d97706',
-  c: '#6b7280',
-};
+import { tierOf, subScoresFor, locLine, industryOf, barCls } from '@/app/app/_lib/leadScoring';
 
 interface Props {
   lead: RankedLead;
   rank: number;
   searchId: string | null;
   initialSaved: boolean;
+  onOpen: (lead: RankedLead) => void;
+  onSaveToggle: (lead: RankedLead, nextSaved: boolean) => Promise<void>;
+  onDismiss?: (leadId: string) => void;
+  toast: (title: string, sub?: string) => void;
+  showReason?: boolean;
 }
 
-export function ResultCard({ lead, rank, searchId, initialSaved }: Props) {
+export function ResultCard({
+  lead,
+  rank,
+  searchId: _searchId,
+  initialSaved,
+  onOpen,
+  onSaveToggle,
+  onDismiss,
+  toast,
+  showReason = true,
+}: Props) {
   const tier = tierOf(lead.matchScore);
   const subs = subScoresFor(lead);
   const phone = lead.contact?.phone ?? lead.phone;
   const email = lead.contact?.email;
   const website = lead.contact?.website ?? lead.website;
 
-  const copy = (text: string) => {
-    if (typeof window === 'undefined' || !text) return;
-    navigator.clipboard?.writeText(text).catch(() => {});
+  const copy = (val: string, label: string) => {
+    if (typeof window === 'undefined' || !val) return;
+    navigator.clipboard?.writeText(val).catch(() => {});
+    toast('Copied', label);
+  };
+
+  const onSaveClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await onSaveToggle(lead, !initialSaved);
+    toast(initialSaved ? 'Removed from saved' : 'Saved', lead.businessName);
   };
 
   return (
-    <article style={styles.card}>
-      <div style={styles.headerRow}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <span style={styles.rank}>#{String(rank).padStart(2, '0')}</span>
-          <h3 style={styles.name}>{lead.businessName}</h3>
+    <article
+      className="lead clickable fadeup"
+      onClick={() => onOpen(lead)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(lead);
+        }
+      }}
+    >
+      <div className="lead-rank">{String(rank).padStart(2, '0')}</div>
+
+      <div className="lead-main">
+        <div className="lead-head">
+          <div className="lead-name">{lead.businessName}</div>
+          {locLine(lead) && (
+            <span className="lead-loc">
+              {lead.city}
+              {lead.state && (
+                <>
+                  <span className="sep">·</span>
+                  {lead.state}
+                </>
+              )}
+            </span>
+          )}
+          <span className="lead-industry">{industryOf(lead)}</span>
         </div>
-        <div style={{ ...styles.scoreBox, color: TIER_COLOR[tier] }}>
-          <div style={styles.scoreNum}>{lead.matchScore}</div>
-          <div style={styles.scoreLabel}>match</div>
+
+        <div className="lead-contact">
+          {phone && (
+            <button
+              type="button"
+              className="contact-field"
+              onClick={(e) => {
+                e.stopPropagation();
+                copy(phone, phone);
+              }}
+              title={`Copy ${phone}`}
+            >
+              <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              {phone}
+            </button>
+          )}
+          {email && (
+            <button
+              type="button"
+              className="contact-field"
+              onClick={(e) => {
+                e.stopPropagation();
+                copy(email, email);
+              }}
+              title={`Copy ${email}`}
+            >
+              <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <path d="m22 6-10 7L2 6" />
+              </svg>
+              {email}
+            </button>
+          )}
         </div>
+
+        {showReason && lead.matchReason && <p className="lead-reason">{lead.matchReason}</p>}
       </div>
 
-      <div style={styles.metaLine}>
-        <span>{industryOf(lead)}</span>
-        <span style={styles.dot}>·</span>
-        <span>{locLine(lead) || '—'}</span>
-        {lead.businessDetails?.estimatedRevenue && (
-          <>
-            <span style={styles.dot}>·</span>
-            <span>{lead.businessDetails.estimatedRevenue} rev</span>
-          </>
-        )}
-      </div>
-
-      <p style={styles.reason}>{lead.matchReason}</p>
-
-      <div style={styles.bars}>
-        {(['revenue', 'location', 'industry', 'signal'] as const).map((k) => (
-          <div key={k} style={styles.barRow}>
-            <span style={styles.barLabel}>{k}</span>
-            <div style={styles.barTrack}>
-              <div
-                style={{
-                  ...styles.barFill,
-                  width: `${subs[k]}%`,
-                  background: barCls(subs[k]) === 'h' ? '#16a34a' : barCls(subs[k]) === 'm' ? '#d97706' : '#9ca3af',
-                }}
-              />
+      <div className="match-col">
+        <div className="match-top">
+          <div className={`match-score ${tier}`}>{lead.matchScore}</div>
+          <div className="match-label">/ 100 · match</div>
+        </div>
+        <div className="match-bars">
+          {(['revenue', 'location', 'industry', 'signal'] as const).map((k) => (
+            <div className="match-bar" key={k}>
+              <div className="match-bar-l">{k}</div>
+              <div className="match-bar-t">
+                <div
+                  className={`match-bar-f ${barCls(subs[k])}`}
+                  style={{ width: `${subs[k]}%` }}
+                />
+              </div>
+              <div className="match-bar-v">{subs[k]}</div>
             </div>
-            <span style={styles.barValue}>{subs[k]}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div style={styles.actions}>
-        <SaveButton lead={lead} searchId={searchId} initialSaved={initialSaved} />
-        {phone && (
-          <button type="button" style={styles.actionBtn} onClick={() => copy(phone)} title={phone}>
-            Copy phone
+      <div className="actions-col">
+        <div className="stat-row">
+          <span>Rev</span>
+          <span className="val">{lead.businessDetails?.estimatedRevenue ?? '—'}</span>
+        </div>
+        <div className="stat-row">
+          <span>Yrs</span>
+          <span className="val">{lead.businessDetails?.yearsInBusiness ?? '—'}</span>
+        </div>
+        <div className="stat-row">
+          <span>★</span>
+          <span className="val">
+            {lead.businessDetails?.googleRating ?? '—'}
+            {lead.businessDetails?.reviewCount ? ` · ${lead.businessDetails.reviewCount}` : ''}
+          </span>
+        </div>
+        <div className="lead-actions">
+          <button
+            type="button"
+            className={`act-btn primary ${initialSaved ? 'on' : ''}`}
+            onClick={onSaveClick}
+            title={initialSaved ? 'Remove from saved' : 'Save lead'}
+          >
+            <svg viewBox="0 0 24 24" fill={initialSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            {initialSaved ? 'Saved' : 'Save'}
           </button>
-        )}
-        {email && (
-          <button type="button" style={styles.actionBtn} onClick={() => copy(email)} title={email}>
-            Copy email
-          </button>
-        )}
-        {website && (
-          <a href={website} target="_blank" rel="noreferrer" style={styles.actionLink}>
-            Website ↗
-          </a>
-        )}
+          {website && (
+            <a
+              href={website.startsWith('http') ? website : `https://${website}`}
+              target="_blank"
+              rel="noreferrer"
+              className="act-btn"
+              title="Open website"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <path d="M15 3h6v6M10 14L21 3" />
+              </svg>
+            </a>
+          )}
+          {onDismiss && (
+            <button
+              type="button"
+              className="act-btn danger"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismiss(lead.id);
+              }}
+              title="Dismiss"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  card: {
-    background: '#fff',
-    border: '1px solid #e5e0d3',
-    borderRadius: 8,
-    padding: 16,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-  },
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  rank: { fontFamily: 'var(--serif), serif', fontStyle: 'italic', color: '#9ca3af', fontSize: 14 },
-  name: { fontSize: 17, fontWeight: 600, margin: 0, lineHeight: 1.3 },
-  scoreBox: { textAlign: 'right' },
-  scoreNum: { fontSize: 24, fontWeight: 700, lineHeight: 1 },
-  scoreLabel: { fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9ca3af' },
-  metaLine: { fontSize: 13, color: '#555', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
-  dot: { color: '#cbd5e1' },
-  reason: {
-    fontFamily: 'var(--serif), Georgia, serif',
-    fontStyle: 'italic',
-    fontSize: 14,
-    color: '#374151',
-    margin: '4px 0',
-    lineHeight: 1.5,
-  },
-  bars: { display: 'flex', flexDirection: 'column', gap: 5 },
-  barRow: { display: 'grid', gridTemplateColumns: '70px 1fr 28px', alignItems: 'center', gap: 8 },
-  barLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280' },
-  barTrack: { height: 6, background: '#f3f4f6', borderRadius: 3, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 3, transition: 'width 0.3s ease' },
-  barValue: { fontSize: 11, color: '#9ca3af', textAlign: 'right' },
-  actions: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 },
-  actionBtn: {
-    fontSize: 12,
-    padding: '4px 10px',
-    border: '1px solid #d1d5db',
-    background: '#fff',
-    borderRadius: 4,
-    cursor: 'pointer',
-  },
-  actionLink: {
-    fontSize: 12,
-    padding: '4px 10px',
-    border: '1px solid #d1d5db',
-    borderRadius: 4,
-    textDecoration: 'none',
-    color: 'inherit',
-  },
-};
