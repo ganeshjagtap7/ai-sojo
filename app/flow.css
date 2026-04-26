@@ -1,7 +1,10 @@
 /* Unified flow — stage-shell + per-stage styling */
 
+/* Scope body styling to the wizard's .shell container so the /app workspace
+ * (which uses its own .sojo layout and scrolls the document) isn't locked.
+ */
 html, body { height: 100%; }
-body { background: var(--paper); overflow: hidden; }
+body:has(.shell) { background: var(--paper); overflow: hidden; }
 #root { height: 100vh; }
 
 /* ============ Global stage-shell ============ */

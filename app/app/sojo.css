@@ -42,12 +42,17 @@
 .sojo input, .sojo textarea, .sojo select { font: inherit; color: inherit; background: none; border: 0; outline: 0; }
 .sojo ::selection { background: color-mix(in oklch, var(--accent) 30%, transparent); }
 
-/* Layout shell ------------------------------------------------------------ */
-.sojo .app { display: grid; grid-template-rows: 52px 1fr; min-height: 100vh; background: var(--bg); }
+/* Layout shell ------------------------------------------------------------
+ * Document body is the scroll container. Header stays pinned via sticky,
+ * refine dock pins to viewport bottom via sticky. No internal overflow-y
+ * regions, which avoids a fragile height chain (min-height: 100vh inside
+ * a grid 1fr breaks overflow on the inner row).
+ */
+.sojo .app { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg); }
 
 .sojo .header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 24px; height: 52px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   position: sticky; top: 0; z-index: 10;
@@ -98,13 +103,10 @@
 }
 
 /* Main + results ---------------------------------------------------------- */
-.sojo .main { display: grid; grid-template-columns: 1fr; overflow: hidden; position: relative; }
-.sojo .view { display: block; min-height: 0; }
+.sojo .main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sojo .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
-.sojo .results-wrap {
-  display: grid; grid-template-rows: auto auto 1fr;
-  min-height: 0;
-}
+.sojo .results-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .sojo .results-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 32px;
@@ -157,7 +159,7 @@
 .sojo .ctrl-btn:hover { color: var(--ink); border-color: var(--border); background: var(--panel); }
 .sojo .ctrl-btn svg { width: 13px; height: 13px; }
 
-.sojo .results-body { padding: 20px 32px 40px; overflow-y: auto; }
+.sojo .results-body { padding: 20px 32px 40px; flex: 1; }
 .sojo .results-grid { display: flex; flex-direction: column; gap: 8px; max-width: 1100px; margin: 0 auto; }
 
 .sojo .query-strip {
@@ -402,7 +404,7 @@
 .sojo-drawer .score-big .match-bar-f.l { background: #9B9687; }
 
 /* Saved + history pages --------------------------------------------------- */
-.sojo .simple-page { padding: 40px 32px 60px; max-width: 1100px; margin: 0 auto; width: 100%; overflow-y: auto; }
+.sojo .simple-page { padding: 40px 32px 60px; max-width: 1100px; margin: 0 auto; width: 100%; }
 .sojo .simple-head { display: flex; align-items: end; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 20px; gap: 16px; }
 .sojo .simple-head h1 { margin: 0 0 4px; font-size: 40px; letter-spacing: -0.025em; font-weight: 400; font-family: var(--font-instrument), serif; line-height: 1.05; }
 .sojo .simple-head h1 em { font-style: italic; color: var(--accent-deep); }
