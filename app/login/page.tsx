@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { sendMagicLink, signInWithGoogle } from '@/app/auth/actions';
+import { sendMagicLink } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function LoginPage({
@@ -30,20 +30,6 @@ export default async function LoginPage({
 
         {message && <p style={styles.info}>{message}</p>}
         {error && <p style={styles.error}>{error}</p>}
-
-        <form action={signInWithGoogle} style={styles.form}>
-          <input type="hidden" name="next" value={nextPath} />
-          <input type="hidden" name="intent" value="login" />
-          <button type="submit" style={styles.googleBtn}>
-            Continue with Google
-          </button>
-        </form>
-
-        <div style={styles.divider}>
-          <span style={styles.dividerLine} />
-          <span style={styles.dividerText}>or</span>
-          <span style={styles.dividerLine} />
-        </div>
 
         <form action={sendMagicLink} style={styles.form}>
           <input type="hidden" name="next" value={nextPath} />
@@ -80,8 +66,4 @@ const styles: Record<string, React.CSSProperties> = {
   label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 500 },
   input: { padding: '0.5rem 0.75rem', fontSize: 14, borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'inherit' },
   button: { padding: '0.625rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' },
-  googleBtn: { padding: '0.625rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#fff', color: '#111', border: '1px solid #d1d5db', cursor: 'pointer' },
-  divider: { display: 'flex', alignItems: 'center', gap: 12 },
-  dividerLine: { flex: 1, height: 1, background: '#e5e7eb' },
-  dividerText: { fontSize: 12, color: '#6b7280' },
 };

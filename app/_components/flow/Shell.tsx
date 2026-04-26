@@ -51,13 +51,16 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
         </div>
         <div className="shell-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {user && (
+          {user ? (
             <>
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.05em' }}>
                 {user.email}
               </span>
+              <a className="doc-link" href="/app">Workspace</a>
               <a className="doc-link" href="#" onClick={(e) => { e.preventDefault(); signOut(); }}>Sign out</a>
             </>
+          ) : (
+            <a className="doc-link" href="/login">Sign in</a>
           )}
           <a className="doc-link" href="#" onClick={(e) => { e.preventDefault(); restart(); }}>Restart</a>
         </div>
