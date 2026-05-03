@@ -15,9 +15,40 @@ interface AIMessage {
   mode: Mode;
   teach?: TeachCard;
   pushbackOf?: string;
+  isError?: boolean;
 }
 interface UserMessage { role: 'user'; text: string; }
 type ConvoItem = AIMessage | UserMessage | { role: 'user-pushback-of'; text: string };
+
+// Translate raw AI SDK / provider error payloads into a short, user-readable
+// sentence. The transport sometimes hands us a JSON blob (OpenAI error shape
+// nested under `error`), sometimes a string. Either way: never render raw
+// JSON in the chat.
+function friendlyErrorText(raw: unknown): string {
+  if (!raw) return "I couldn't reach the model. Try again in a moment.";
+
+  let parsed: unknown = raw;
+  if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw); } catch { /* leave as string */ }
+  }
+
+  const obj = (parsed && typeof parsed === 'object') ? (parsed as Record<string, unknown>) : null;
+  const inner = (obj?.error && typeof obj.error === 'object') ? obj.error as Record<string, unknown> : obj;
+  const code = inner?.code as string | undefined;
+  const type = inner?.type as string | undefined;
+
+  if (code === 'insufficient_quota' || type === 'insufficient_quota') {
+    return "The AI provider's billing quota is exhausted on this project. Ask Ganesh to top up the API plan, then try again.";
+  }
+  if (code === 'rate_limit_exceeded' || type === 'rate_limit_error') {
+    return 'The model is rate-limited right now. Give it a few seconds and try again.';
+  }
+  if (code === 'invalid_api_key' || code === 'invalid_request_error') {
+    return 'The AI provider rejected the request. The API key may be missing or invalid.';
+  }
+  if (typeof raw === 'string' && raw.length < 200) return raw;
+  return "I couldn't reach the model. Try again in a moment.";
+}
 
 const BUCKET_DEFS: { id: BucketKey; label: string }[] = [
   { id: 'opening', label: 'Opening posture' },
@@ -30,6 +61,22 @@ const BUCKET_DEFS: { id: BucketKey; label: string }[] = [
 
 const OPENER_TEXT =
   "Let's start somewhere honest. What kinds of businesses do you find yourself thinking about — either a specific idea you have, or a general shape?";
+
+// Deterministic teach card for the archetype bucket. The 4 cells never change,
+// so we render them client-side whenever the active bucket is `archetype` and
+// it hasn't been filled yet — gpt-4o intermittently slips back into elicit
+// mode and lists the names in prose, even when the prompt explicitly requires
+// teach mode. This makes the UX robust to the LLM's mood.
+const ARCHETYPE_CARD: TeachCard = {
+  eye: '§ Three · Archetype',
+  h: 'Which of these is closest to how you\'d think about it?',
+  cells: [
+    { n: 'i.',   name: 'The local monopoly',   body: 'Own the only one in a small market. Defensible by geography.' },
+    { n: 'ii.',  name: 'The consolidator',     body: 'Buy #1, then #2, then #3. Defensible by scale.' },
+    { n: 'iii.', name: 'The operator upgrade', body: 'Buy a sleepy business, professionalize it. Defensible by capability.' },
+    { n: 'iv.',  name: 'The quiet moat',       body: 'Niche product, boring category, obscene margins.' },
+  ],
+};
 
 export function Stage3Converse() {
   const { state, dispatch } = useFlow();
@@ -96,7 +143,14 @@ export function Stage3Converse() {
           if (raw === '[DONE]') continue;
           try {
             const ev = JSON.parse(raw);
-            if (ev.type === 'text-delta' && typeof ev.delta === 'string') {
+            if (ev.type === 'text-start') {
+              // New text segment. With multi-step streaming the model can emit
+              // text in step 1 AND step 2 — the second emission is the canonical
+              // "next question" we want to show. Reset the accumulator so step 2
+              // replaces step 1 instead of being appended to it (which produced
+              // the doubled-prose bug).
+              aiText = '';
+            } else if (ev.type === 'text-delta' && typeof ev.delta === 'string') {
               aiText += ev.delta;
               if (!opened) {
                 opened = true;
@@ -113,8 +167,11 @@ export function Stage3Converse() {
         }
       }
 
-      if (streamError && !opened) {
-        setHistory((h) => [...h, { role: 'ai', text: `(error: ${streamError})`, mode: 'elicit' } as AIMessage]);
+      if (streamError) {
+        // Render error in its own message no matter what — even if some text
+        // started streaming first, we want the failure called out clearly.
+        const friendly = friendlyErrorText(streamError);
+        setHistory((h) => [...h, { role: 'ai', text: friendly, mode: 'elicit', isError: true } as AIMessage]);
       }
 
       if (lastTool) {
@@ -126,12 +183,29 @@ export function Stage3Converse() {
         setHistory((h) => {
           const last = h[h.length - 1];
           if (!last || last.role !== 'ai') return h;
+          // Force the archetype turn into teach mode with the deterministic
+          // card. gpt-4o intermittently slips back into elicit and lists the
+          // four archetype names in prose — overriding here keeps the UX
+          // consistent regardless of LLM compliance.
+          const onArchetypeTurn =
+            lastTool!.bucket === 'archetype' &&
+            !lastTool!.bucketValue &&
+            !state.buckets.archetype;
+          const mode = onArchetypeTurn ? 'teach' : (lastTool!.mode ?? last.mode);
+          // teachCard is only valid for `mode: teach`. Drop stale cards from
+          // the model accidentally re-emitting an old one on a different
+          // bucket's turn (was producing archetype cells under disqualifier).
+          const teach = onArchetypeTurn
+            ? ARCHETYPE_CARD
+            : mode === 'teach'
+            ? lastTool!.teachCard ?? undefined
+            : undefined;
           return [
             ...h.slice(0, -1),
             {
               ...last,
-              mode: lastTool!.mode ?? last.mode,
-              teach: lastTool!.teachCard ?? undefined,
+              mode,
+              teach,
               pushbackOf: lastTool!.pushbackOf ?? undefined,
             } as AIMessage,
           ];
@@ -139,7 +213,12 @@ export function Stage3Converse() {
         if (lastTool.sessionComplete) setSessionComplete(true);
       }
     } catch (err) {
-      setHistory((h) => [...h, { role: 'ai', text: `(network error: ${err instanceof Error ? err.message : 'unknown'})`, mode: 'elicit' } as AIMessage]);
+      setHistory((h) => [...h, {
+        role: 'ai',
+        text: friendlyErrorText(err instanceof Error ? err.message : 'network'),
+        mode: 'elicit',
+        isError: true,
+      } as AIMessage]);
     } finally {
       setTyping(false);
     }
@@ -210,6 +289,64 @@ export function Stage3Converse() {
           <div className="s3-convo-inner">
             {history.map((h, i) => {
               if (h.role === 'ai') {
+                if (h.isError) {
+                  return (
+                    <div className="turn fade-in" key={i}>
+                      <div
+                        style={{
+                          padding: '12px 16px',
+                          border: '1px dashed var(--ink-12, rgba(0,0,0,0.12))',
+                          borderRadius: 8,
+                          background: 'var(--paper-2, rgba(0,0,0,0.02))',
+                          fontSize: 14,
+                          color: 'var(--ink-55, rgba(0,0,0,0.65))',
+                          lineHeight: 1.5,
+                          maxWidth: 560,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontFamily: 'var(--sans, inherit)',
+                            fontSize: 11,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: 'var(--crimson, #b91c1c)',
+                            marginBottom: 6,
+                          }}
+                        >
+                          · Trouble reaching the model
+                        </div>
+                        {h.text}
+                        <button
+                          type="button"
+                          onClick={() => sendToAI(
+                            history
+                              .filter((m): m is AIMessage | UserMessage => m.role === 'ai' || m.role === 'user')
+                              .filter((m) => !(m.role === 'ai' && (m as AIMessage).isError))
+                              .map((m) => ({
+                                role: m.role === 'ai' ? ('assistant' as const) : ('user' as const),
+                                content: m.text,
+                              }))
+                          )}
+                          style={{
+                            marginTop: 10,
+                            display: 'block',
+                            fontFamily: 'var(--sans, inherit)',
+                            fontSize: 12,
+                            padding: '4px 10px',
+                            border: '1px solid var(--ink-12, rgba(0,0,0,0.2))',
+                            background: 'transparent',
+                            color: 'inherit',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <div className="turn fade-in" key={i}>
                     <div className={`turn-lbl ${h.mode}`}>
