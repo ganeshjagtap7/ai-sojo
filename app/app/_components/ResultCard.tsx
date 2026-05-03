@@ -3,6 +3,17 @@
 import type { RankedLead } from '@/lib/types';
 import { tierOf, subScoresFor, locLine, industryOf, barCls } from '@/app/app/_lib/leadScoring';
 
+// Short source badge — small uppercase tag on each card so the user can see
+// the scraper mix at a glance without opening every drawer.
+const SOURCE_BADGE: Record<string, string> = {
+  google_maps: 'maps',
+  web_search: 'web',
+  bbb: 'bbb',
+  yellowpages: 'yp',
+  manta: 'manta',
+  directory: 'dir',
+};
+
 interface Props {
   lead: RankedLead;
   rank: number;
@@ -74,6 +85,21 @@ export function ResultCard({
             </span>
           )}
           <span className="lead-industry">{industryOf(lead)}</span>
+          <span
+            className="lead-industry"
+            style={{
+              fontFamily: 'var(--font-geist-mono), monospace',
+              fontSize: 10,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              color: 'var(--faint)',
+            }}
+            title="Source"
+          >
+            {SOURCE_BADGE[lead.source] ?? lead.source}
+          </span>
         </div>
 
         <div className="lead-contact">

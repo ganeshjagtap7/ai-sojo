@@ -12,6 +12,25 @@ interface Props {
   isSaved?: boolean;
 }
 
+// Pretty label per source. Lets the user verify in the drawer which scraper
+// pulled this lead — useful for sanity-checking that all 5 sources are firing.
+const SOURCE_LABEL: Record<string, string> = {
+  google_maps: 'Google Maps',
+  web_search: 'Web search',
+  bbb: 'BBB.org',
+  yellowpages: 'YellowPages.com',
+  manta: 'Manta.com',
+  directory: 'Directory',
+};
+
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
   // Esc to close.
   useEffect(() => {
@@ -106,6 +125,24 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
               <dd>{email}</dd>
               <dt>Website</dt>
               <dd>{website}</dd>
+            </dl>
+          </div>
+
+          <div>
+            <h4>Source</h4>
+            <dl className="kv-grid">
+              <dt>Scraped from</dt>
+              <dd className="text">{SOURCE_LABEL[lead.source] ?? lead.source}</dd>
+              {lead.sourceUrl && (
+                <>
+                  <dt>Listing</dt>
+                  <dd>
+                    <a href={lead.sourceUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                      {hostnameOf(lead.sourceUrl)}
+                    </a>
+                  </dd>
+                </>
+              )}
             </dl>
           </div>
 
