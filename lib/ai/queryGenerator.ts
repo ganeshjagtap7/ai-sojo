@@ -17,6 +17,7 @@ export async function generateSearchQueries(criteria: SearchCriteria) {
       googleMaps: z.array(z.string()).min(3).max(5),
       webSearch: z.array(z.string()).min(3).max(5),
       bbb: z.array(z.string()).min(2).max(4),
+      yellowpages: z.array(z.string()).min(2).max(4),
     }),
     prompt: `Generate search queries for:
 Industry: ${criteria.industry.primary}

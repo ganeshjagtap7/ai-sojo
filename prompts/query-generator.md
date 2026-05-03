@@ -17,9 +17,15 @@ Given acquisition criteria, generate search queries optimized for two sources:
    - Example: "plumbing contractor"
    - Example: "residential plumbing"
 
+4. **YellowPages queries** (2-4): Same shape as BBB — short keyword phrases passed to the YellowPages.com search box (location is supplied separately).
+   - Use the bare industry term, sub-sector, or common synonym
+   - Example: "plumbers"
+   - Example: "hvac contractors"
+
 Return JSON:
 {
   "googleMaps": ["query1", "query2", ...],
   "webSearch": ["query1", "query2", ...],
-  "bbb": ["query1", "query2", ...]
+  "bbb": ["query1", "query2", ...],
+  "yellowpages": ["query1", "query2", ...]
 }

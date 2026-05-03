@@ -43,7 +43,7 @@ export interface RawLead {
   employeeCount: number | null;
   bbbRating: string | null;
   bbbAccredited: boolean | null;
-  source: 'google_maps' | 'web_search' | 'bbb' | 'directory';
+  source: 'google_maps' | 'web_search' | 'bbb' | 'yellowpages' | 'manta' | 'directory';
   sourceUrl: string | null;
   rawData: unknown;
 }
