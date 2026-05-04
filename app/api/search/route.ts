@@ -1,5 +1,3 @@
-import { nanoid } from 'nanoid';
-import { jobStore } from '@/lib/pipeline/jobStore';
 import { runSearchPipeline } from '@/lib/pipeline/searchPipeline';
 import { bucketsToCriteria } from '@/lib/pipeline/bucketsToCriteria';
 import type { SearchCriteria } from '@/lib/types';
@@ -42,12 +40,16 @@ export async function POST(req: Request) {
     return Response.json({ error: 'City and industry are required' }, { status: 400 });
   }
 
-  const jobId = `srch_${nanoid(12)}`;
-  jobStore.create(jobId, criteria);
-
-  runSearchPipeline(jobId, criteria).catch((err) => {
-    jobStore.fail(jobId, err instanceof Error ? err.message : 'Unknown error');
-  });
-
-  return Response.json({ jobId, status: 'processing', estimatedSeconds: 60 }, { status: 202 });
+  // Run the pipeline synchronously and return the full result. Takes 30–90s
+  // typically, well under maxDuration: 300. The previous async + jobStore
+  // model broke on Vercel because each serverless instance had its own
+  // in-memory Map, so /status polls usually missed the job.
+  try {
+    const result = await runSearchPipeline(criteria);
+    return Response.json(result, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Search pipeline failed';
+    console.error('[/api/search] pipeline error:', err);
+    return Response.json({ error: message }, { status: 500 });
+  }
 }

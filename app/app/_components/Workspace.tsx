@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { RankedLead, SearchCriteria, SearchMetadata } from '@/lib/types';
+import type { RankedLead, SearchCriteria } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
 import { ResultCard } from './ResultCard';
 import { LeadDrawer } from './LeadDrawer';
@@ -74,7 +74,9 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
     setScreen({ kind: 'running', label: input.query ? `Searching · ${input.query}` : 'Finding your matches…' });
 
     try {
-      const startRes = await fetch('/api/search', {
+      // /api/search is now synchronous — runs the full pipeline (30–90s) and
+      // returns { leads, metadata } in one response. No more poll loop.
+      const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,10 +86,8 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
           criteriaOverride: input.criteriaOverride,
         }),
       });
-      const startJson = await startRes.json();
-      if (!startRes.ok || !startJson.jobId) throw new Error(startJson.error ?? 'Failed to start search');
-
-      const completed = await pollUntilDone(startJson.jobId as string);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Search failed');
 
       const persistRes = await fetch('/api/app/searches', {
         method: 'POST',
@@ -95,8 +95,8 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
         body: JSON.stringify({
           thesisId: thesis.id,
           query: input.query,
-          leads: completed.leads,
-          metadata: completed.metadata,
+          leads: json.leads,
+          metadata: json.metadata,
           status: 'complete',
         }),
       });
@@ -106,7 +106,7 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
       router.replace(`/app?search=${persistJson.searchId}`);
       router.refresh();
       setScreen({ kind: 'idle' });
-      pushToast('Search complete', `${completed.leads.length} leads ranked`);
+      pushToast('Search complete', `${json.leads.length} leads ranked`);
     } catch (err) {
       setScreen({ kind: 'failed', error: err instanceof Error ? err.message : 'Search failed' });
     }
@@ -379,26 +379,6 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
       <ToastStack toasts={toasts} dismiss={dismissToast} />
     </div>
   );
-}
-
-async function pollUntilDone(jobId: string): Promise<{ leads: RankedLead[]; metadata: SearchMetadata | null }> {
-  const start = Date.now();
-  const timeoutMs = 5 * 60 * 1000;
-
-  while (Date.now() - start < timeoutMs) {
-    const statusRes = await fetch(`/api/search/${jobId}/status`);
-    const statusJson = await statusRes.json();
-    if (statusJson.status === 'complete') {
-      const resultsRes = await fetch(`/api/search/${jobId}/results`);
-      const resultsJson = await resultsRes.json();
-      return { leads: resultsJson.leads ?? [], metadata: resultsJson.metadata ?? null };
-    }
-    if (statusJson.status === 'failed') {
-      throw new Error(statusJson.error ?? 'Search pipeline failed');
-    }
-    await new Promise((r) => setTimeout(r, 2500));
-  }
-  throw new Error('Search timed out');
 }
 
 function SearchingPanel({ label, sub }: { label: string; sub: string }) {
