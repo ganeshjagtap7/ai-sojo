@@ -1,5 +1,6 @@
 import { ApifyClient } from 'apify-client';
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource, cappedMaxResults } from '@/lib/scraping/scrapingPolicy';
 
 const client = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
 
@@ -51,7 +52,8 @@ function parseInteger(v: unknown): number | null {
 }
 
 export async function scrapeManta(criteria: SearchCriteria): Promise<RawLead[]> {
-  const maxResults = parseInt(process.env.MAX_RESULTS_PER_SCRAPER || '50');
+  assertPublicSource('manta');
+  const maxResults = cappedMaxResults(parseInt(process.env.MAX_RESULTS_PER_SCRAPER || '50'));
   const category = categoryFor(criteria.industry.primary);
   const states = criteria.location.state ? [criteria.location.state] : ['IL'];
 
