@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# startupage scraper (local session + generated output)
+startupage-auth.json
+startupage-leads.xlsx
+startupage-*.html
