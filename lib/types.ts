@@ -43,14 +43,16 @@ export interface RawLead {
   employeeCount: number | null;
   bbbRating: string | null;
   bbbAccredited: boolean | null;
-  source: 'google_maps' | 'web_search' | 'bbb' | 'yellowpages' | 'manta' | 'startupage' | 'directory';
+  source: 'google_maps' | 'web_search' | 'bbb' | 'yellowpages' | 'manta' | 'startupage' | 'apppeak' | 'directory';
   sourceUrl: string | null;
-  // === Deal-sourcing fields (populated by marketplace scrapers like StartuPage) ===
+  // === Deal-sourcing fields (populated by marketplace scrapers like StartuPage / AppPeak) ===
   // Optional so local-business scrapers and the enricher compile untouched.
   mrr?: number | null;            // monthly recurring revenue, USD
   askingPrice?: number | null;    // sale price, USD (null when not for sale)
   revenueMultiple?: number | null; // asking price / annual revenue (null when N/A)
+  profitMultiple?: number | null;  // asking price / annual profit (null when N/A)
   annualRevenue?: number | null;  // USD, when stated directly
+  annualProfit?: number | null;   // USD, when stated directly
   forSale?: boolean | null;       // true = listed for sale, false = MRR-only target
   founderName?: string | null;
   foundedDate?: string | null;    // founding date from profile JSON-LD, e.g. "2026-06-01"
