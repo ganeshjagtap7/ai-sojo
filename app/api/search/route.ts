@@ -3,6 +3,7 @@ import { bucketsToCriteria } from '@/lib/pipeline/bucketsToCriteria';
 import type { SearchCriteria } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/ratelimit';
+import { toFriendlyError } from '@/lib/errors/friendly';
 
 export const maxDuration = 300;
 export const preferredRegion = 'iad1';
@@ -51,16 +52,37 @@ export async function POST(req: Request) {
     return Response.json({ error: 'City and industry are required' }, { status: 400 });
   }
 
-  // Run the pipeline synchronously and return the full result. Takes 30–90s
-  // typically, well under maxDuration: 300. The previous async + jobStore
-  // model broke on Vercel because each serverless instance had its own
-  // in-memory Map, so /status polls usually missed the job.
-  try {
-    const result = await runSearchPipeline(criteria);
-    return Response.json(result, { status: 200 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Search pipeline failed';
-    console.error('[/api/search] pipeline error:', err);
-    return Response.json({ error: message }, { status: 500 });
-  }
+  // Stream the pipeline's progress to the client over SSE. The pipeline still
+  // runs to completion in a single request (30–90s, under maxDuration: 300);
+  // the stream just surfaces phase-by-phase progress so the UI can show a live
+  // label, then a terminal result or error event. The 401/429 gates above
+  // already returned plain JSON before we ever open this stream.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+      };
+      try {
+        const { leads, metadata } = await runSearchPipeline(criteria, (e) =>
+          send({ type: 'progress', ...e }),
+        );
+        send({ type: 'result', leads, metadata });
+      } catch (err) {
+        const { userMessage, logDetail } = toFriendlyError(err);
+        console.error('[/api/search]', logDetail);
+        send({ type: 'error', errorText: userMessage });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    },
+  });
 }

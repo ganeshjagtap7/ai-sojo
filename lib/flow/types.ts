@@ -34,21 +34,6 @@ export interface Thesis {
   flag: string | null;
 }
 
-export interface SearchProgress {
-  step: string;
-  stepsCompleted: number;
-  totalSteps: number;
-  message?: string;
-}
-
-export interface SearchMetadataLite {
-  totalScraped: number;
-  afterDedup: number;
-  afterFiltering: number;
-  sourcesUsed: string[];
-  searchDurationSeconds: number;
-}
-
 export type Stage = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface FlowState {
@@ -57,12 +42,8 @@ export interface FlowState {
   facts: Facts;
   buckets: Buckets;
   thesis: Thesis | null;
-  jobId: string | null;
   progressMode: 'auto' | 'early' | 'mid' | 'done';
-  searchProgress: SearchProgress | null;
-  searchMetadata: SearchMetadataLite | null;
   leads: RankedLead[];
-  searchError: string | null;
 }
 
 export const INITIAL_STATE: FlowState = {
@@ -71,12 +52,8 @@ export const INITIAL_STATE: FlowState = {
   facts: {},
   buckets: {},
   thesis: null,
-  jobId: null,
   progressMode: 'auto',
-  searchProgress: null,
-  searchMetadata: null,
   leads: [],
-  searchError: null,
 };
 
 export type FlowAction =
@@ -85,10 +62,6 @@ export type FlowAction =
   | { type: 'SET_FACTS'; facts: Facts }
   | { type: 'PATCH_BUCKETS'; patch: Buckets }
   | { type: 'SET_THESIS'; thesis: Thesis }
-  | { type: 'START_SEARCH'; jobId: string }
-  | { type: 'UPDATE_PROGRESS'; progress: SearchProgress }
-  | { type: 'COMPLETE_SEARCH'; leads: RankedLead[]; metadata: SearchMetadataLite }
-  | { type: 'FAIL_SEARCH'; error: string }
   | { type: 'SET_PROGRESS_MODE'; mode: FlowState['progressMode'] }
   | { type: 'RESTART' };
 

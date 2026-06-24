@@ -33,16 +33,6 @@ test('PATCH_BUCKETS merges buckets', () => {
   assert.equal(s.buckets.stickiness, 'contracts');
 });
 
-test('START_SEARCH clears prior search state', () => {
-  const s = reducer(
-    { ...INITIAL_STATE, searchError: 'prev', leads: [{ id: 'x' } as never] },
-    { type: 'START_SEARCH', jobId: 'srch_1' }
-  );
-  assert.equal(s.jobId, 'srch_1');
-  assert.equal(s.searchError, null);
-  assert.deepEqual(s.leads, []);
-});
-
 test('RESTART returns to initial', () => {
   const dirty: FlowState = {
     ...INITIAL_STATE,
