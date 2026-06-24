@@ -48,3 +48,7 @@ startupage-*.html
 # apppeak scraper (generated output + inspection dumps)
 apppeak-leads.xlsx
 apppeak-*.html
+
+# quietlight scraper (generated output + inspection dumps)
+quietlight-leads.xlsx
+quietlight-*.html
