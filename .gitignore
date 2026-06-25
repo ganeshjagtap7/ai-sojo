@@ -56,3 +56,7 @@ quietlight-*.html
 # websiteclosers scraper (generated output + inspection dumps)
 websiteclosers-leads.xlsx
 websiteclosers-*.html
+
+# investors club scraper (generated output + inspection dumps)
+investorsclub-leads.xlsx
+investorsclub-*.html
