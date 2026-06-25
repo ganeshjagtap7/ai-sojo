@@ -2,8 +2,8 @@ import { runSearchPipeline } from '@/lib/pipeline/searchPipeline';
 import { bucketsToCriteria } from '@/lib/pipeline/bucketsToCriteria';
 import type { SearchCriteria } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit } from '@/lib/ratelimit';
-import { toFriendlyError } from '@/lib/errors/friendly';
+import { checkRateLimit, refundRateLimit } from '@/lib/ratelimit';
+import { toFriendlyError, NO_RESULTS } from '@/lib/errors/friendly';
 
 export const maxDuration = 300;
 export const preferredRegion = 'iad1';
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { allowed } = await checkRateLimit(user.id);
+  const { allowed } = await checkRateLimit(user.id, 'search');
   if (!allowed) {
     return Response.json({ error: 'Daily limit reached. Try again tomorrow.' }, { status: 429 });
   }
@@ -71,6 +71,11 @@ export async function POST(req: Request) {
       } catch (err) {
         const { userMessage, logDetail } = toFriendlyError(err);
         console.error('[/api/search]', logDetail);
+        // Refund the quota slot when the failure is ours (scraper/model/etc.).
+        // NOT for NO_RESULTS: the pipeline ran end-to-end and spent the full
+        // compute budget, it just found nothing — that legitimately uses a slot.
+        const ranButEmpty = err instanceof Error && err.message === NO_RESULTS;
+        if (!ranButEmpty) await refundRateLimit(user.id, 'search');
         send({ type: 'error', errorText: userMessage });
       } finally {
         controller.close();

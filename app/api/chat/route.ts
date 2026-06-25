@@ -12,7 +12,10 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { allowed } = await checkRateLimit(user.id);
+  // Chat uses the high per-day cap (RATE_LIMIT_CHAT, default 100) and streams
+  // its reply, so a mid-stream model failure isn't refunded — one uncredited
+  // turn out of 100 is immaterial, unlike the scarce search/thesis budgets.
+  const { allowed } = await checkRateLimit(user.id, 'chat');
   if (!allowed) {
     return Response.json({ error: 'Daily limit reached. Try again tomorrow.' }, { status: 429 });
   }

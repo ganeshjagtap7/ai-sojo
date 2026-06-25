@@ -1,9 +1,14 @@
 /**
  * Scraping policy — the single source of truth for how this app scrapes.
  *
- * Every scraper in `lib/scraping/` routes through this module so our conduct
- * is enforced in one place rather than re-stated (and drifting) per scraper.
- * It codifies two principles:
+ * Every scraper wired into the production pipeline (`lib/pipeline/
+ * searchPipeline.ts`) routes through this module, so our conduct is enforced in
+ * one place rather than re-stated (and drifting) per scraper. The local-only
+ * Phase-1 deal scrapers (`apppeak` / `quietlight` / `startupage`) are
+ * deliberately NOT covered here: they run as standalone dev scripts (never on
+ * Vercel) and some authenticate to the site (e.g. `startupage` reuses a saved
+ * login session), so they are not public, logged-out sources and must never be
+ * added to the allowlist below. It codifies two principles:
  *
  *  (a) Logged-out / public-only. We only ever collect data that is publicly
  *      visible WITHOUT authenticating to any site — no logins, no accounts,
