@@ -52,3 +52,7 @@ apppeak-*.html
 # quietlight scraper (generated output + inspection dumps)
 quietlight-leads.xlsx
 quietlight-*.html
+
+# websiteclosers scraper (generated output + inspection dumps)
+websiteclosers-leads.xlsx
+websiteclosers-*.html
