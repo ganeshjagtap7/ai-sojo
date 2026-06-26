@@ -71,8 +71,10 @@ microns-auth.json
 microns-leads.xlsx
 microns-*.html
 microns-api-*.json
-microns-api-list.json
-microns-api-detail.json
+
+# synergy business brokers scraper (generated output + inspection dumps)
+synergy-leads.xlsx
+synergy-*.html
 
 # synergy business brokers scraper (generated output + inspection dumps)
 synergy-leads.xlsx
