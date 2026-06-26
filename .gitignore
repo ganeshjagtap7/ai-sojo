@@ -60,3 +60,8 @@ websiteclosers-*.html
 # investors club scraper (generated output + inspection dumps)
 investorsclub-leads.xlsx
 investorsclub-*.html
+
+# motion invest scraper (local session + generated output + inspection dumps)
+motioninvest-auth.json
+motioninvest-leads.xlsx
+motioninvest-*.html
