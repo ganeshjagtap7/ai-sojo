@@ -96,6 +96,13 @@ buybiz-leads.xlsx
 buybiz-*.html
 buybiz-api-*.json
 
+# mergerdomo scraper (local session + generated output + inspection dumps)
+mergerdomo-auth.json
+mergerdomo-sale-leads.xlsx
+mergerdomo-buyers-leads.xlsx
+mergerdomo-*.html
+mergerdomo-api-*.json
+
 # synergy business brokers scraper (generated output + inspection dumps)
 synergy-leads.xlsx
 synergy-*.html
