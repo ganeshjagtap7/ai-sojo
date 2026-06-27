@@ -76,6 +76,11 @@ microns-api-*.json
 businessdeals-leads.xlsx
 businessdeals-*.html
 
+# exitbid scraper (generated output + inspection dumps)
+exitbid-leads.xlsx
+exitbid-*.html
+exitbid-api-*.json
+
 # synergy business brokers scraper (generated output + inspection dumps)
 synergy-leads.xlsx
 synergy-*.html
