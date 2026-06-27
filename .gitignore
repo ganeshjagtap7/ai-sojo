@@ -40,73 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# startupage scraper (local session + generated output)
-startupage-auth.json
-startupage-leads.xlsx
-startupage-*.html
-
-# apppeak scraper (generated output + inspection dumps)
-apppeak-leads.xlsx
-apppeak-*.html
-
-# quietlight scraper (generated output + inspection dumps)
-quietlight-leads.xlsx
-quietlight-*.html
-
-# websiteclosers scraper (generated output + inspection dumps)
-websiteclosers-leads.xlsx
-websiteclosers-*.html
-
-# investors club scraper (generated output + inspection dumps)
-investorsclub-leads.xlsx
-investorsclub-*.html
-
-# motion invest scraper (local session + generated output + inspection dumps)
-motioninvest-auth.json
-motioninvest-leads.xlsx
-motioninvest-*.html
-
-# microns scraper (local session + generated output + inspection dumps)
-microns-auth.json
-microns-leads.xlsx
-microns-*.html
-microns-api-*.json
-
-# businessdeals scraper (generated output + inspection dumps)
-businessdeals-leads.xlsx
-businessdeals-*.html
-
-# exitbid scraper (generated output + inspection dumps)
-exitbid-leads.xlsx
-exitbid-*.html
-exitbid-api-*.json
-
-# sideprojectors scraper (generated output + inspection dumps)
-sideprojectors-leads.xlsx
-sideprojectors-*.html
-sideprojectors-api-*.json
-
-# indiabizforsale scraper (generated output + inspection dumps)
-indiabiz-leads.xlsx
-indiabiz-*.html
-indiabiz-api-*.json
-
-# buybiz scraper (generated output + inspection dumps)
-buybiz-leads.xlsx
-buybiz-*.html
-buybiz-api-*.json
-
-# mergerdomo scraper (local session + generated output + inspection dumps)
-mergerdomo-auth.json
-mergerdomo-sale-leads.xlsx
-mergerdomo-buyers-leads.xlsx
-mergerdomo-*.html
-mergerdomo-api-*.json
-
-# synergy business brokers scraper (generated output + inspection dumps)
-synergy-leads.xlsx
-synergy-*.html
-
-# synergy business brokers scraper (generated output + inspection dumps)
-synergy-leads.xlsx
-synergy-*.html
+# local scraper artifacts — never commit (applies to every scraper)
+#   *-auth.json   = saved login sessions (SENSITIVE)
+#   *-leads.xlsx  = generated review outputs
+#   *-*.html      = saved list/detail page dumps (recon)
+#   *-api-*.json  = captured API responses (recon)
+*-auth.json
+*-leads.xlsx
+*-*.html
+*-api-*.json
