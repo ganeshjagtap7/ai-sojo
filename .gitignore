@@ -91,6 +91,11 @@ indiabiz-leads.xlsx
 indiabiz-*.html
 indiabiz-api-*.json
 
+# buybiz scraper (generated output + inspection dumps)
+buybiz-leads.xlsx
+buybiz-*.html
+buybiz-api-*.json
+
 # synergy business brokers scraper (generated output + inspection dumps)
 synergy-leads.xlsx
 synergy-*.html
