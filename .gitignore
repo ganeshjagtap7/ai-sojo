@@ -86,6 +86,11 @@ sideprojectors-leads.xlsx
 sideprojectors-*.html
 sideprojectors-api-*.json
 
+# indiabizforsale scraper (generated output + inspection dumps)
+indiabiz-leads.xlsx
+indiabiz-*.html
+indiabiz-api-*.json
+
 # synergy business brokers scraper (generated output + inspection dumps)
 synergy-leads.xlsx
 synergy-*.html
