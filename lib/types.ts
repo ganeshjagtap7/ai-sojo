@@ -43,7 +43,7 @@ export interface RawLead {
   employeeCount: number | null;
   bbbRating: string | null;
   bbbAccredited: boolean | null;
-  source: 'google_maps' | 'web_search' | 'bbb' | 'yellowpages' | 'manta' | 'startupage' | 'apppeak' | 'quietlight' | 'websiteclosers' | 'investorsclub' | 'motioninvest' | 'microns' | 'synergy' | 'businessdeals' | 'exitbid' | 'directory';
+  source: 'google_maps' | 'web_search' | 'bbb' | 'yellowpages' | 'manta' | 'startupage' | 'apppeak' | 'quietlight' | 'websiteclosers' | 'investorsclub' | 'motioninvest' | 'microns' | 'synergy' | 'businessdeals' | 'exitbid' | 'sideprojectors' | 'directory';
   sourceUrl: string | null;
   // === Deal-sourcing fields (populated by marketplace scrapers like StartuPage / AppPeak) ===
   // Optional so local-business scrapers and the enricher compile untouched.

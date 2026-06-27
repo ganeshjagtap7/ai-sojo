@@ -81,6 +81,11 @@ exitbid-leads.xlsx
 exitbid-*.html
 exitbid-api-*.json
 
+# sideprojectors scraper (generated output + inspection dumps)
+sideprojectors-leads.xlsx
+sideprojectors-*.html
+sideprojectors-api-*.json
+
 # synergy business brokers scraper (generated output + inspection dumps)
 synergy-leads.xlsx
 synergy-*.html
