@@ -1,4 +1,8 @@
-// ⚠️ LOCAL-ONLY (Phase 1). Plain fetch (no browser). See scripts/test-businessesforsale.ts.
+// Plain fetch (no browser) — wired into the product via lib/scraping/registry.ts.
+// Criteria-aware: builds the site's own search URL (verified 2026-07-04:
+//   /us/search/plumbing-businesses-for-sale-in-georgia → HTTP 200, same
+//   class="result" cards as the generic feed) and caps pages per run via
+//   SCRAPER_MAX_PAGES so a live search never sweeps the whole site.
 //
 // businessesforsale.com (US section) — global incumbent, ~16k US listings. The
 // DETAIL pages are Cloudflare-protected (403), but the LIST pages are open + fully
@@ -11,6 +15,7 @@
 //   Default scrapes ALL (~16k, long). Set BFSALE_LIMIT=500 to cap.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { stateFullName } from '@/lib/utils/usStates';
 
 const BASE = 'https://us.businessesforsale.com/us/search/businesses-for-sale';
 const SITE = 'https://us.businessesforsale.com';
@@ -22,6 +27,27 @@ const limitFromEnv = (): number => {
   const n = parseInt(process.env.BFSALE_LIMIT, 10);
   return Number.isFinite(n) && n > 0 ? n : Infinity;
 };
+
+const maxPagesFromEnv = (): number => {
+  const n = parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10);
+  return Number.isFinite(n) && n > 0 ? n : 3;
+};
+
+const slug = (s: string): string =>
+  s.toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/** Maps criteria to the site's own search path; falls back to the generic feed.
+ *  Verified URL forms (2026-07-04):
+ *    /us/search/<industry>-businesses-for-sale
+ *    /us/search/<industry>-businesses-for-sale-in-<state-name>
+ *  Pagination appends -<N> in both forms, same as the generic feed. */
+function buildSearchPath(criteria?: SearchCriteria): string {
+  const industry = criteria?.industry.primary ? slug(criteria.industry.primary) : '';
+  const state = criteria?.location.state ? slug(stateFullName(criteria.location.state)) : '';
+  if (industry && state) return `/us/search/${industry}-businesses-for-sale-in-${state}`;
+  if (industry) return `/us/search/${industry}-businesses-for-sale`;
+  return '/us/search/businesses-for-sale';
+}
 
 const clean = (s: string | undefined): string =>
   (s || '')
@@ -103,8 +129,10 @@ function parseCards(html: string): Card[] {
   return cards;
 }
 
-export async function scrapeBusinessesForSale(_criteria?: SearchCriteria): Promise<RawLead[]> {
+export async function scrapeBusinessesForSale(criteria?: SearchCriteria): Promise<RawLead[]> {
   const limit = limitFromEnv();
+  const maxPages = maxPagesFromEnv();
+  const searchBase = SITE + buildSearchPath(criteria);
   const headers = {
     'User-Agent': UA,
     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -113,8 +141,8 @@ export async function scrapeBusinessesForSale(_criteria?: SearchCriteria): Promi
 
   const cards: Card[] = [];
   const seen = new Set<string>();
-  for (let page = 1; cards.length < limit; page++) {
-    const url = page === 1 ? BASE : `${BASE}-${page}`;
+  for (let page = 1; cards.length < limit && page <= maxPages; page++) {
+    const url = page === 1 ? searchBase : `${searchBase}-${page}`;
     let html: string;
     try {
       const res = await fetch(url, { headers });
@@ -135,6 +163,21 @@ export async function scrapeBusinessesForSale(_criteria?: SearchCriteria): Promi
     }
     console.log(`[BForSale] page ${page}: +${fresh} (total ${cards.length})`);
     if (fresh === 0) break;
+  }
+  // A criteria path that matched nothing (e.g. an industry slug the site
+  // doesn't know) falls back to one page of the generic feed rather than
+  // returning empty-handed.
+  if (cards.length === 0 && searchBase !== BASE) {
+    try {
+      const res = await fetch(BASE, { headers });
+      if (res.ok) {
+        for (const c of parseCards(await res.text())) {
+          if (!seen.has(c.url)) { seen.add(c.url); cards.push(c); }
+          if (cards.length >= limit) break;
+        }
+        console.log(`[BForSale] criteria search empty; generic-feed fallback: ${cards.length}`);
+      }
+    } catch { /* fallback is best-effort */ }
   }
   console.log(`[BForSale] listings: ${cards.length}`);
 

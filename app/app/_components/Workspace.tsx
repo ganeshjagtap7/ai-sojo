@@ -444,6 +444,17 @@ const SOURCE_LABELS: Record<string, string> = {
   bbb: 'BBB',
   yellowpages: 'YellowPages',
   manta: 'Manta',
+  businessesforsale: 'BusinessesForSale',
+  businessex: 'BusinessEx',
+  buybiz: 'BuyBiz',
+  smedealz: 'smeDealz',
+  franchisegator: 'FranchiseGator',
+  sideprojectors: 'SideProjectors',
+  trustmrr: 'TrustMRR',
+  producthunt: 'Product Hunt',
+  hvacinformed: 'HVACinformed',
+  esa: 'ESA contractors',
+  serviceexperts: 'Service Experts',
 };
 
 function progressLabel(ev: ProgressEvent): string {
