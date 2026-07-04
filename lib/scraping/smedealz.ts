@@ -7,6 +7,11 @@
 // estimate_value is in LAKHS (×1e5 -> rupees); financials (sale/ebidta/pat) are
 // raw rupees. Owner name/email/phone are exposed by the API but masked on the
 // page, so we DON'T capture them.
+//
+// CRITERIA-AWARE (Phase 2): the getListings API takes no industry/location filter
+// — site has no search. So we page-cap only: we process at most
+// SCRAPER_MAX_PAGES * PER_PAGE listings (bounding the per-listing detail POSTs)
+// rather than the whole feed. Downstream dedupe/rank do the criteria filtering.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -16,6 +21,7 @@ const DETAIL_API = `${SITE}/propertyView/viewproperty`;
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const DETAIL_CONCURRENCY = 5;
+const PER_PAGE = 25; // notional feed page size for the SCRAPER_MAX_PAGES cap
 
 const WORKING: Record<string, string> = { W: 'Working', P: 'Partially working', C: 'Closed' };
 const SALE: Record<string, string> = { F: 'Fully', P: 'Partially' };
@@ -88,12 +94,15 @@ async function fetchDetail(id: string): Promise<DetailItem | null> {
 }
 
 export async function scrapeSmeDealz(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
+  const cap = maxPages * PER_PAGE;
   const listRes = await fetch(LIST_API, {
     headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json', 'User-Agent': UA },
   });
   if (!listRes.ok) throw new Error(`getListings failed: ${listRes.status}`);
-  const list = (await listRes.json()) as ListItem[];
-  console.log(`[smeDealz] listings: ${list.length}. Fetching detail…`);
+  const all = (await listRes.json()) as ListItem[];
+  const list = all.slice(0, cap); // page-cap: bound the per-listing detail POSTs
+  console.log(`[smeDealz] listings: ${list.length}/${all.length} (cap ${cap}). Fetching detail…`);
 
   // detail enrichment (full description + 3yr financials)
   const details = new Map<string, DetailItem>();
