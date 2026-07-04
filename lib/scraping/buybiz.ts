@@ -56,7 +56,12 @@ function cfValue(cf: CustomField): string {
   return v == null ? '' : String(v).trim();
 }
 
+// CRITERIA-AWARE (Phase 2): the get-item API exposes no industry/location query
+// param — site has no server-side search. So we page-cap only: fetch at most
+// SCRAPER_MAX_PAGES pages (50/page) instead of the whole catalogue. The router
+// only sends BuyBiz for India searches; downstream dedupe/rank do the filtering.
 export async function scrapeBuyBiz(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
   const items: ApiItem[] = [];
   let page = 1;
   let lastPage = 1;
@@ -71,9 +76,9 @@ export async function scrapeBuyBiz(_criteria?: SearchCriteria): Promise<RawLead[
     items.push(...pageItems);
     lastPage = json.data?.last_page ?? page;
     page++;
-  } while (page <= lastPage);
+  } while (page <= lastPage && page <= maxPages);
 
-  console.log(`[BuyBiz] fetched ${items.length} listings`);
+  console.log(`[BuyBiz] fetched ${items.length} listings (max ${maxPages} pages)`);
 
   const thisYear = new Date().getFullYear();
   return items.map((it): RawLead => {
