@@ -1,10 +1,6 @@
 import { SearchCriteria, RawLead, RankedLead, SearchMetadata } from '@/lib/types';
 import { generateSearchQueries } from '@/lib/ai/queryGenerator';
-import { scrapeGoogleMaps } from '@/lib/scraping/googleMaps';
-import { scrapeWebSearch } from '@/lib/scraping/webSearch';
-import { scrapeBBB } from '@/lib/scraping/bbb';
-import { scrapeYellowPages } from '@/lib/scraping/yellowpages';
-import { scrapeManta } from '@/lib/scraping/manta';
+import { selectSources } from '@/lib/scraping/router';
 import { deduplicateLeads } from '@/lib/utils/deduplicator';
 import { enrichLeads } from '@/lib/ai/enricher';
 import { rankLeads } from '@/lib/ai/ranker';
@@ -21,7 +17,7 @@ export interface SearchResult {
  */
 export type ProgressEvent =
   | { phase: 'queries' }
-  | { phase: 'source'; source: string; ok: boolean; index: number; total: 5 }
+  | { phase: 'source'; source: string; ok: boolean; index: number; total: number }
   | { phase: 'dedup'; count: number }
   | { phase: 'enriching'; count: number }
   | { phase: 'ranking' };
@@ -29,9 +25,13 @@ export type ProgressEvent =
 type OnProgress = (event: ProgressEvent) => void;
 
 /**
- * Run the full pipeline (queries → scrape × 5 → dedup → enrich → rank) and
+ * Run the full pipeline (queries → routed scrape → dedup → enrich → rank) and
  * return the result. Synchronous from the caller's perspective; takes 30–90s
  * end-to-end, well under Vercel's 300s function ceiling.
+ *
+ * Sources are no longer hardcoded: lib/scraping/router.ts picks the relevant
+ * sources for these criteria from the registry (always-on core + up to
+ * MAX_EXTRA_SOURCES routed extras).
  *
  * Note: previously this kicked the pipeline async and tracked it via an
  * in-memory jobStore polled by the client. That broke on Vercel because
@@ -48,52 +48,46 @@ export async function runSearchPipeline(
   const queries = await generateSearchQueries(criteria);
   onProgress({ phase: 'queries' });
 
-  // Each scraper gets a 1-based index so the UI can render "{index} of 5".
+  const picked = selectSources(criteria);
+  console.log(`[Pipeline] Routed sources: ${picked.map((s) => s.id).join(', ')}`);
+
+  // Each scraper gets a 1-based index so the UI can render "{index} of {total}".
   // We attach a .then/.catch per scraper to emit a settle event the moment it
   // resolves or rejects, while still feeding the same promises into
   // Promise.allSettled so a single failure never aborts the batch.
-  const sources: Array<{ source: string; index: number; promise: Promise<RawLead[]> }> = [
-    { source: 'google_maps', index: 1, promise: scrapeGoogleMaps(queries.googleMaps, criteria.location) },
-    { source: 'web_search', index: 2, promise: scrapeWebSearch(queries.webSearch) },
-    { source: 'bbb', index: 3, promise: scrapeBBB(queries.bbb, criteria.location) },
-    { source: 'yellowpages', index: 4, promise: scrapeYellowPages(queries.yellowpages, criteria.location) },
-    { source: 'manta', index: 5, promise: scrapeManta(criteria) },
-  ];
+  const total = picked.length;
+  const runs = picked.map((def, i) => ({
+    def,
+    index: i + 1,
+    promise: def.run({ criteria, queries }),
+  }));
 
-  for (const { source, index, promise } of sources) {
+  for (const { def, index, promise } of runs) {
     promise
-      .then(() => onProgress({ phase: 'source', source, ok: true, index, total: 5 }))
-      .catch(() => onProgress({ phase: 'source', source, ok: false, index, total: 5 }));
+      .then(() => onProgress({ phase: 'source', source: def.id, ok: true, index, total }))
+      .catch(() => onProgress({ phase: 'source', source: def.id, ok: false, index, total }));
   }
 
-  const [mapsResult, webResult, bbbResult, ypResult, mantaResult] = await Promise.allSettled(
-    sources.map((s) => s.promise),
-  );
+  const settled = await Promise.allSettled(runs.map((r) => r.promise));
 
-  if (mapsResult.status === 'rejected') console.error('[Pipeline] Google Maps scraper failed:', mapsResult.reason);
-  if (webResult.status === 'rejected') console.error('[Pipeline] Web search scraper failed:', webResult.reason);
-  if (bbbResult.status === 'rejected') console.error('[Pipeline] BBB scraper failed:', bbbResult.reason);
-  if (ypResult.status === 'rejected') console.error('[Pipeline] YellowPages scraper failed:', ypResult.reason);
-  if (mantaResult.status === 'rejected') console.error('[Pipeline] Manta scraper failed:', mantaResult.reason);
+  settled.forEach((res, i) => {
+    if (res.status === 'rejected') {
+      console.error(`[Pipeline] ${runs[i].def.label} scraper failed:`, res.reason);
+    } else {
+      console.log(`[Pipeline] ${runs[i].def.id}: ${res.value.length} leads`);
+    }
+  });
 
-  const rawLeads: RawLead[] = [
-    ...(mapsResult.status === 'fulfilled' ? mapsResult.value : []),
-    ...(webResult.status === 'fulfilled' ? webResult.value : []),
-    ...(bbbResult.status === 'fulfilled' ? bbbResult.value : []),
-    ...(ypResult.status === 'fulfilled' ? ypResult.value : []),
-    ...(mantaResult.status === 'fulfilled' ? mantaResult.value : []),
-  ];
+  const rawLeads: RawLead[] = settled.flatMap((res) =>
+    res.status === 'fulfilled' ? res.value : []);
 
   console.log(`[Pipeline] Raw leads collected: ${rawLeads.length}`);
 
   if (rawLeads.length === 0) {
-    const reasons = [
-      mapsResult.status === 'rejected' ? `Maps: ${mapsResult.reason?.message || mapsResult.reason}` : null,
-      webResult.status === 'rejected' ? `Web: ${webResult.reason?.message || webResult.reason}` : null,
-      bbbResult.status === 'rejected' ? `BBB: ${bbbResult.reason?.message || bbbResult.reason}` : null,
-      ypResult.status === 'rejected' ? `YellowPages: ${ypResult.reason?.message || ypResult.reason}` : null,
-      mantaResult.status === 'rejected' ? `Manta: ${mantaResult.reason?.message || mantaResult.reason}` : null,
-    ].filter(Boolean).join('; ');
+    const reasons = settled
+      .map((res, i) => res.status === 'rejected'
+        ? `${runs[i].def.label}: ${(res.reason as Error)?.message || res.reason}` : null)
+      .filter(Boolean).join('; ');
     if (reasons) console.error('[Pipeline] No raw leads; source reasons:', reasons);
     throw new Error(NO_RESULTS);
   }
@@ -112,13 +106,9 @@ export async function runSearchPipeline(
     .filter((lead) => lead.matchScore >= threshold)
     .slice(0, 30);
 
-  const sourcesUsed: string[] = [
-    ...(mapsResult.status === 'fulfilled' ? ['google_maps'] : []),
-    ...(webResult.status === 'fulfilled' ? ['web_search'] : []),
-    ...(bbbResult.status === 'fulfilled' ? ['bbb'] : []),
-    ...(ypResult.status === 'fulfilled' ? ['yellowpages'] : []),
-    ...(mantaResult.status === 'fulfilled' ? ['manta'] : []),
-  ];
+  const sourcesUsed: string[] = settled
+    .map((res, i) => (res.status === 'fulfilled' && res.value.length > 0 ? runs[i].def.id : null))
+    .filter((x): x is RawLead['source'] => x !== null);
 
   return {
     leads: finalLeads,
