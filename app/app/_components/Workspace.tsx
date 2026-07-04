@@ -37,7 +37,7 @@ interface Props {
 type ScreenState =
   | { kind: 'initial-loading' }
   | { kind: 'idle' }
-  | { kind: 'running'; label: string }
+  | { kind: 'running'; label: string; sub: string }
   | { kind: 'failed'; error: string };
 
 type FilterTab = 'all' | 'top' | 'saved';
@@ -49,7 +49,11 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
     !activeSearch && searches.length === 0
       ? { kind: 'initial-loading' }
       : activeSearch?.status === 'running'
-      ? { kind: 'running', label: 'Search in progress…' }
+      ? // Searches persist only on completion now, so a stored 'running' status
+        // is a stale row from the old async flow — never an actual in-flight
+        // search. Rendering it as running would spin forever with no request
+        // behind it; surface it as retryable instead.
+        { kind: 'failed', error: 'This search never finished — run it again.' }
       : { kind: 'idle' },
   );
   const [filter, setFilter] = useState<FilterTab>('all');
@@ -72,7 +76,13 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
   }, []);
 
   async function runSearch(input: { query: string | null; criteriaOverride: Partial<SearchCriteria> | null }) {
-    setScreen({ kind: 'running', label: input.query ? `Searching · ${input.query}` : 'Finding your matches…' });
+    // Refinement re-runs get refine copy; a plain (or auto-kicked first) search
+    // must not claim to be "re-ranking a refinement" — that copy confused real
+    // users into thinking the app was stuck (issue #8).
+    const sub = input.criteriaOverride
+      ? 'Re-ranking against your refinement.'
+      : 'Scanning live sources — usually takes 1–2 minutes.';
+    setScreen({ kind: 'running', label: input.query ? `Searching · ${input.query}` : 'Finding your matches…', sub });
 
     try {
       // /api/search streams SSE progress events as the pipeline advances, then a
@@ -88,6 +98,9 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
           buckets: thesis.buckets,
           criteriaOverride: input.criteriaOverride,
         }),
+        // The server function is capped at 300s; if the stream hangs past that
+        // the abort turns an invisible hang into the failed screen with retry.
+        signal: AbortSignal.timeout(330_000),
       });
       if (!res.ok || !res.body) {
         const json = await res.json().catch(() => ({}));
@@ -115,7 +128,7 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
             continue; // ignore malformed lines
           }
           if (ev.type === 'progress') {
-            setScreen({ kind: 'running', label: progressLabel(ev as ProgressEvent) });
+            setScreen({ kind: 'running', label: progressLabel(ev as ProgressEvent), sub });
           } else if (ev.type === 'result') {
             result = { leads: ev.leads ?? [], metadata: ev.metadata };
           } else if (ev.type === 'error') {
@@ -293,7 +306,7 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
 
         <div className="results-body">
           {screen.kind === 'initial-loading' && <SearchingPanel label="Finding your matches" sub="Scanning Google Maps, BBB, and the open web. Usually takes 15–60 seconds." />}
-          {screen.kind === 'running' && <SearchingPanel label={screen.label} sub="Re-ranking against your refinement." />}
+          {screen.kind === 'running' && <SearchingPanel label={screen.label} sub={screen.sub} />}
           {screen.kind === 'failed' && (
             <div className="searching">
               <h2 className="searching-title">Search <em>failed</em>.</h2>
