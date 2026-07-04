@@ -25,7 +25,9 @@ const US_STATES = new Set([
 ]);
 
 const limitFromEnv = (): number => {
-  if (process.env.SE_LIMIT === undefined) return Infinity;
+  // Phase 2 page-cap: default the app path to SCRAPER_MAX_PAGES*25 (no full sweep);
+  // set SE_LIMIT explicitly for a wider standalone scrape.
+  if (process.env.SE_LIMIT === undefined) return Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10)) * 25;
   const n = parseInt(process.env.SE_LIMIT, 10);
   return Number.isFinite(n) && n > 0 ? n : Infinity;
 };
