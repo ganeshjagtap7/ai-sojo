@@ -1,5 +1,6 @@
 import { ApifyClient } from 'apify-client';
 import { RawLead } from '@/lib/types';
+import { assertPublicSource, cappedMaxResults } from '@/lib/scraping/scrapingPolicy';
 
 const client = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
 
@@ -17,10 +18,13 @@ function extractPhone(text: string): string | null {
 }
 
 export async function scrapeWebSearch(queries: string[]): Promise<RawLead[]> {
+  assertPublicSource('web_search');
+  const resultsPerPage = cappedMaxResults(10);
+
   const run = await client.actor(GOOGLE_SEARCH_ACTOR).call({
     queries: queries.join('\n'),
     maxPagesPerQuery: 1,
-    resultsPerPage: 10,
+    resultsPerPage,
     languageCode: 'en',
     countryCode: 'us',
   }, {

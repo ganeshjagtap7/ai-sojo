@@ -40,8 +40,6 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['apify-client', 'proxy-agent'],
   outputFileTracingIncludes: {
     '/api/search': proxyAgentIncludes,
-    '/api/search/[jobId]/status': proxyAgentIncludes,
-    '/api/search/[jobId]/results': proxyAgentIncludes,
   },
 };
 

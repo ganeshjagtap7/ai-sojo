@@ -14,9 +14,10 @@ interface FlowContextValue {
 const FlowContext = createContext<FlowContextValue | null>(null);
 FlowContext.displayName = 'FlowContext';
 
-// Fields that shouldn't survive a page refresh — a stale jobId points at a stream the server has dropped.
+// Hook for clearing any non-persistent fields on reload. No transient
+// fields remain today, so this passes the sanitized state through unchanged.
 function resetTransient(s: FlowState): FlowState {
-  return { ...s, jobId: null, searchProgress: null, searchError: null };
+  return s;
 }
 
 function sanitize(parsed: unknown): FlowState {

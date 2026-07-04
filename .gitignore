@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local scraper artifacts — never commit (applies to every scraper)
+#   *-auth.json   = saved login sessions (SENSITIVE)
+#   *-leads.xlsx  = generated review outputs
+#   *-*.html      = saved list/detail page dumps (recon)
+#   *-api-*.json  = captured API responses (recon)
+*-auth.json
+*-leads.xlsx
+*-*.html
+*-api-*.json

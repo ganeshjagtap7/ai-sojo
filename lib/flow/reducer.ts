@@ -14,21 +14,6 @@ export function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, buckets: { ...state.buckets, ...action.patch } };
     case 'SET_THESIS':
       return { ...state, thesis: action.thesis };
-    case 'START_SEARCH':
-      return {
-        ...state,
-        jobId: action.jobId,
-        searchError: null,
-        leads: [],
-        searchMetadata: null,
-        searchProgress: null,
-      };
-    case 'UPDATE_PROGRESS':
-      return { ...state, searchProgress: action.progress };
-    case 'COMPLETE_SEARCH':
-      return { ...state, leads: action.leads, searchMetadata: action.metadata };
-    case 'FAIL_SEARCH':
-      return { ...state, searchError: action.error };
     case 'SET_PROGRESS_MODE':
       return { ...state, progressMode: action.mode };
     case 'RESTART':

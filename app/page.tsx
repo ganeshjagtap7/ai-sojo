@@ -1,6 +1,7 @@
 'use client';
 
-import { AuthProvider } from './_components/auth/AuthProvider';
+import { AuthProvider, useAuth } from './_components/auth/AuthProvider';
+import { Stage7AuthGate } from './_components/auth/Stage7AuthGate';
 import { FlowProvider, useFlow } from './_components/flow/FlowProvider';
 import { Shell } from './_components/flow/Shell';
 import { Stage0Landing } from './_components/flow/Stage0Landing';
@@ -14,6 +15,19 @@ import { TweaksPanel } from './_components/flow/TweaksPanel';
 
 function StageRouter() {
   const { state } = useFlow();
+  const { user, loading } = useAuth();
+
+  // Login before onboarding: the wizard hits paid, auth-gated endpoints
+  // (/api/chat at stage 3, /api/thesis at stage 5). Without a session those
+  // 401 mid-flow, so require auth to advance past the public landing (stage 0).
+  // Stages 1-2 make no API calls, but gating the whole wizard keeps the rule
+  // simple and matches PRD G1 ("no unauthenticated paid endpoints"). The route
+  // handlers stay gated server-side regardless — this is just the UX layer.
+  if (state.stage >= 1) {
+    if (loading) return null; // don't render a stage (or fire its calls) until auth resolves
+    if (!user) return <Stage7AuthGate context="start" />;
+  }
+
   switch (state.stage) {
     case 0: return <Stage0Landing />;
     case 1: return <Stage1Identify />;

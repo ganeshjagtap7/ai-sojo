@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { RankedLead, SearchCriteria } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
+import type { ProgressEvent } from '@/lib/pipeline/searchPipeline';
 import { ResultCard } from './ResultCard';
 import { LeadDrawer } from './LeadDrawer';
 import { ToastStack, useToasts } from './ToastStack';
@@ -74,8 +75,10 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
     setScreen({ kind: 'running', label: input.query ? `Searching · ${input.query}` : 'Finding your matches…' });
 
     try {
-      // /api/search is now synchronous — runs the full pipeline (30–90s) and
-      // returns { leads, metadata } in one response. No more poll loop.
+      // /api/search streams SSE progress events as the pipeline advances, then a
+      // terminal { type: 'result' } (or { type: 'error' }). We POST once and read
+      // the body with a reader loop, driving the running label off each progress
+      // event and capturing leads + metadata from the result event.
       const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,8 +89,43 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
           criteriaOverride: input.criteriaOverride,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Search failed');
+      if (!res.ok || !res.body) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? 'Search failed');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let result: { leads: RankedLead[]; metadata: unknown } | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6);
+          let ev: { type?: string; leads?: RankedLead[]; metadata?: unknown; errorText?: string } & Partial<ProgressEvent>;
+          try {
+            ev = JSON.parse(raw);
+          } catch {
+            continue; // ignore malformed lines
+          }
+          if (ev.type === 'progress') {
+            setScreen({ kind: 'running', label: progressLabel(ev as ProgressEvent) });
+          } else if (ev.type === 'result') {
+            result = { leads: ev.leads ?? [], metadata: ev.metadata };
+          } else if (ev.type === 'error') {
+            throw new Error(ev.errorText ?? 'Search failed');
+          }
+        }
+      }
+
+      if (!result) throw new Error('Search ended without a result.');
+      const json = result;
 
       const persistRes = await fetch('/api/app/searches', {
         method: 'POST',
@@ -398,6 +436,29 @@ function SearchingPanel({ label, sub }: { label: string; sub: string }) {
       </div>
     </div>
   );
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  google_maps: 'Google Maps',
+  web_search: 'the open web',
+  bbb: 'BBB',
+  yellowpages: 'YellowPages',
+  manta: 'Manta',
+};
+
+function progressLabel(ev: ProgressEvent): string {
+  switch (ev.phase) {
+    case 'queries':
+      return 'Generating search queries…';
+    case 'source':
+      return `Scanning ${SOURCE_LABELS[ev.source] ?? ev.source}… ${ev.index} of ${ev.total}`;
+    case 'dedup':
+      return `De-duplicating ${ev.count} leads…`;
+    case 'enriching':
+      return `Enriching ${ev.count} businesses…`;
+    case 'ranking':
+      return 'Ranking matches…';
+  }
 }
 
 function thesisOneLiner(thesis: WorkspaceThesis): string {
