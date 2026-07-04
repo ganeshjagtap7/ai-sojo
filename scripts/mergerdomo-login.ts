@@ -37,9 +37,22 @@ async function main() {
   await Promise.race([onEnter, onLoggedIn]);
   rl.close();
 
-  await context.storageState({ path: AUTH });
+  const state = await context.storageState({ path: AUTH });
   console.log(`\n✓ Saved session to ${AUTH}`);
   await browser.close();
+
+  // Print the serialized cookie string to paste into MERGERDOMO_COOKIES
+  // (Phase 3: production reads it from env instead of the session file).
+  const cookieStr = (state.cookies || [])
+    .filter((c) => (c.domain ?? '').includes('mergerdomo.com'))
+    .map((c) => `${c.name}=${c.value}`)
+    .join('; ');
+  if (cookieStr) {
+    console.log('\nFor production (.env.local / Vercel), set:');
+    console.log(`  MERGERDOMO_COOKIES=${cookieStr}`);
+  } else {
+    console.log('\n(No mergerdomo.com cookies found — log in fully, then re-run to capture MERGERDOMO_COOKIES.)');
+  }
 }
 
 main().catch((err) => {

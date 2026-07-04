@@ -15,7 +15,12 @@ const AUTH_FILE = join(process.cwd(), 'microns-auth.json');
 const DETAIL_CONCURRENCY = 8;
 
 function getToken(): string {
-  if (!existsSync(AUTH_FILE)) throw new Error('No session. Run: npx tsx scripts/microns-login.ts');
+  // Env-first (Phase 3): production reads MICRONS_TOKEN from the environment so no
+  // session file needs to ship. Kept DISABLED in the registry pending compliance
+  // sign-off (this scraper uses a logged-in buyer token).
+  if (process.env.MICRONS_TOKEN) return process.env.MICRONS_TOKEN;
+  // Local-dev fallback: session file captured by scripts/microns-login.ts
+  if (!existsSync(AUTH_FILE)) throw new Error('Set MICRONS_TOKEN or run: npx tsx scripts/microns-login.ts');
   const state = JSON.parse(readFileSync(AUTH_FILE, 'utf8')) as { cookies?: { name: string; value: string }[] };
   const tok = (state.cookies || []).find((c) => c.name === 'token');
   if (!tok) throw new Error('No `token` cookie in microns-auth.json — re-run scripts/microns-login.ts');

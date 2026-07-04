@@ -31,7 +31,12 @@ const limitFromEnv = (): number => {
 };
 
 function cookieHeader(): string {
-  if (!existsSync(AUTH)) throw new Error('mergerdomo-auth.json missing — run: npx tsx scripts/mergerdomo-login.ts');
+  // Env-first (Phase 3): production reads the serialized "name=value; name=value"
+  // cookie string from MERGERDOMO_COOKIES so no session file needs to ship. Kept
+  // DISABLED in the registry pending compliance sign-off (logged-in buyer session).
+  if (process.env.MERGERDOMO_COOKIES) return process.env.MERGERDOMO_COOKIES.trim();
+  // Local-dev fallback: session file captured by scripts/mergerdomo-login.ts
+  if (!existsSync(AUTH)) throw new Error('Set MERGERDOMO_COOKIES or run: npx tsx scripts/mergerdomo-login.ts');
   const data = JSON.parse(readFileSync(AUTH, 'utf-8')) as { cookies?: { name: string; value: string; domain?: string }[] };
   return (data.cookies ?? [])
     .filter((c) => (c.domain ?? '').includes('mergerdomo.com'))

@@ -32,10 +32,19 @@ async function main() {
   console.log('──────────────────────────────────────────────────────────\n');
 
   await waitForEnter('Press ENTER once logged in… ');
-  await context.storageState({ path: AUTH_FILE });
+  const state = await context.storageState({ path: AUTH_FILE });
   await browser.close();
   console.log(`\n✓ Session saved to ${AUTH_FILE}`);
-  console.log('Now run:  npx tsx scripts/inspect-microns.ts');
+
+  // Print the token to paste into MICRONS_TOKEN (Phase 3: production reads it from env).
+  const tok = (state.cookies || []).find((c) => c.name === 'token');
+  if (tok) {
+    console.log('\nFor production (.env.local / Vercel), set:');
+    console.log(`  MICRONS_TOKEN=${decodeURIComponent(tok.value)}`);
+  } else {
+    console.log('\n(No `token` cookie found — log in fully, then re-run to capture MICRONS_TOKEN.)');
+  }
+  console.log('\nNow run:  npx tsx scripts/inspect-microns.ts');
 }
 
 main().catch((err) => {
