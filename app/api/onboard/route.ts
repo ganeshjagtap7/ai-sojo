@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 
+// DB-only route — colocate with Supabase (Mumbai) for India-based users (#12).
+export const preferredRegion = 'bom1';
+
 // Mirrors the FlowState slice we care about persisting. We only accept fields
 // the user actually generated — everything else gets dropped on the floor.
 const OnboardSchema = z.object({
@@ -48,6 +51,18 @@ export async function POST(req: Request) {
   // users without forcing a separate code path.
   if (!thesis || !thesis.paragraph) {
     return Response.json({ ok: true, persisted: false }, { status: 200 });
+  }
+
+  // A thesis with NO captured answers is unusable downstream — searches would
+  // run with no industry/location (issue #11). Refuse loudly rather than
+  // persisting a row that silently breaks the workspace.
+  const factsEmpty = !facts || Object.keys(facts).length === 0;
+  const bucketsEmpty = !buckets || Object.keys(buckets).length === 0;
+  if (factsEmpty && bucketsEmpty) {
+    return Response.json(
+      { error: 'Your thesis answers did not come through — please go back and redo the thesis conversation before saving.' },
+      { status: 400 },
+    );
   }
 
   // Update profile archetype if it came through. RLS lets the user touch

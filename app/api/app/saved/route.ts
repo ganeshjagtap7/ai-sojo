@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 
+// DB-only route — colocate with Supabase (Mumbai) for India-based users (#12).
+export const preferredRegion = 'bom1';
+
 const STAGES = ['New', 'Outreach', 'Discovery', 'LOI sent', 'Passed'] as const;
 const StageSchema = z.enum(STAGES);
 

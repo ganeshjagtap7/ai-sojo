@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
+// Serve near the Supabase DB (Mumbai) — these pages are pure DB reads, and the
+// team is in India; iad1 would add two ocean round-trips per navigation (#12).
+export const preferredRegion = 'bom1';
 
 interface SearchRow {
   id: string;
