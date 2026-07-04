@@ -9,7 +9,9 @@
 // marketplace, so deal fields stay empty.
 //   Default keeps only "Valid" licences (~10,308 active = the real leads).
 //   ESA_STATUS=all keeps every status; ESA_STATUS=Valid,Suspended for a custom set.
-//   ESA_LIMIT=200 caps the output.
+//   Query-based (Phase 2): filtered to the mandate's city (when given) and
+//   capped at SCRAPER_MAX_ITEMS (default 150). One fetch either way — the
+//   endpoint has no pagination — so the cap bounds output, not bandwidth.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -36,10 +38,17 @@ interface ESARecord {
   wt: number[] | null; a: string; hc: boolean;
 }
 
-const limitFromEnv = (): number => {
-  if (process.env.ESA_LIMIT === undefined) return Infinity;
-  const n = parseInt(process.env.ESA_LIMIT, 10);
-  return Number.isFinite(n) && n > 0 ? n : Infinity;
+const maxItemsFromEnv = (fallbackEnv: string | undefined): number => {
+  // Per-search cap: SCRAPER_MAX_ITEMS (global) or the scraper-specific legacy
+  // env; a full-site sweep is never allowed in the request path.
+  const n = parseInt(process.env.SCRAPER_MAX_ITEMS ?? fallbackEnv ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 150;
+};
+
+const keywordsOf = (criteria?: SearchCriteria): string[] => {
+  if (!criteria) return [];
+  return [criteria.industry.primary, ...criteria.industry.subSectors, ...criteria.industry.keywords]
+    .join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 };
 
 // ESA_STATUS: "Valid" (default), "all", or a comma list (e.g. "Valid,Suspended")
@@ -55,8 +64,9 @@ const normProvince = (p: string | null): string | null => {
   return /^ont(ario)?$/i.test(p.trim()) ? 'ON' : p.trim();
 };
 
-export async function scrapeEsaContractors(_criteria?: SearchCriteria): Promise<RawLead[]> {
-  const limit = limitFromEnv();
+export async function scrapeEsaContractors(criteria?: SearchCriteria): Promise<RawLead[]> {
+  const limit = maxItemsFromEnv(process.env.ESA_LIMIT);
+  const wantCity = (criteria?.location.city || '').trim().toLowerCase();
   const keep = statusFilter();
 
   console.log('[ESA] fetching contractor dataset…');
@@ -68,6 +78,9 @@ export async function scrapeEsaContractors(_criteria?: SearchCriteria): Promise<
   const out: RawLead[] = [];
   for (const r of all) {
     if (!keep(r.ls)) continue;
+    // Mandate city filter (dataset is Ontario-wide; a city mandate shouldn't
+    // return the whole province).
+    if (wantCity && !(r.c || '').toLowerCase().includes(wantCity)) continue;
     if (out.length >= limit) break;
     const street = [r.s, r.u].filter(Boolean).join(', ') || null;
     const categories = Array.from(new Set((r.wt || []).map(workTypeLabel)));

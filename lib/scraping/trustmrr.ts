@@ -6,7 +6,8 @@
 // rendered (Next.js RSC payload embedded in the HTML). We enumerate the sitemap,
 // fetch each detail page, and decode the embedded startup object — including the
 // founder's X profile. `onSale` marks the for-sale marketplace listings (~1848).
-//   Default scrapes ALL (~4772). Set TMRR_LIMIT=300 to cap.
+//   Query-based (Phase 2): capped at SCRAPER_MAX_ITEMS (default 150) per run;
+//   slugs matching the mandate's industry keywords are fetched first.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -16,10 +17,17 @@ const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const CONCURRENCY = 10;
 
-const limitFromEnv = (): number => {
-  if (process.env.TMRR_LIMIT === undefined) return Infinity;
-  const n = parseInt(process.env.TMRR_LIMIT, 10);
-  return Number.isFinite(n) && n > 0 ? n : Infinity;
+const maxItemsFromEnv = (fallbackEnv: string | undefined): number => {
+  // Per-search cap: SCRAPER_MAX_ITEMS (global) or the scraper-specific legacy
+  // env; a full-site sweep is never allowed in the request path.
+  const n = parseInt(process.env.SCRAPER_MAX_ITEMS ?? fallbackEnv ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 150;
+};
+
+const keywordsOf = (criteria?: SearchCriteria): string[] => {
+  if (!criteria) return [];
+  return [criteria.industry.primary, ...criteria.industry.subSectors, ...criteria.industry.keywords]
+    .join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 };
 
 // concatenate the Next.js RSC streaming chunks back into one string
@@ -117,15 +125,19 @@ function extractStartup(big: string, slug: string): Startup | null {
   );
 }
 
-export async function scrapeTrustMRR(_criteria?: SearchCriteria): Promise<RawLead[]> {
-  const limit = limitFromEnv();
+export async function scrapeTrustMRR(criteria?: SearchCriteria): Promise<RawLead[]> {
+  const limit = maxItemsFromEnv(process.env.TMRR_LIMIT);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 
   // --- 1. Enumerate startup slugs from the public sitemap ---
   const sm = await fetch(SITEMAP, { headers });
   const xml = await sm.text();
   const slugs = Array.from(new Set(Array.from(xml.matchAll(/\/startup\/([a-z0-9-]+)</gi)).map((m) => m[1])));
-  const targets = slugs.slice(0, limit === Infinity ? slugs.length : limit);
+  // Mandate-relevant slugs first (slug ≈ product name), then the newest rest.
+  const kw = keywordsOf(criteria);
+  const matches = kw.length ? slugs.filter((sl) => kw.some((w) => sl.includes(w))) : [];
+  const rest = slugs.filter((sl) => !matches.includes(sl));
+  const targets = [...matches, ...rest].slice(0, limit);
   console.log(`[TrustMRR] sitemap startups: ${slugs.length}; fetching ${targets.length} detail pages…`);
 
   // --- 2. Fetch + parse each public detail page ---
