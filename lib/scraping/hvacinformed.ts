@@ -39,7 +39,9 @@ function envv(key: string): string {
 }
 
 const limitFromEnv = (): number => {
-  if (process.env.HV_LIMIT === undefined) return Infinity;
+  // Phase 2 page-cap: default the app path to SCRAPER_MAX_PAGES*25 (no full sweep);
+  // set HV_LIMIT explicitly for a wider standalone scrape.
+  if (process.env.HV_LIMIT === undefined) return Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10)) * 25;
   const n = parseInt(process.env.HV_LIMIT, 10);
   return Number.isFinite(n) && n > 0 ? n : Infinity;
 };
