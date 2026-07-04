@@ -7,7 +7,10 @@
 // The list already has most fields (asking price, annual sale, EBITDA, year, etc.);
 // the detail JWT adds gross income, reason for sale, pitch, summary, country.
 // Owner contact comes back empty (gated server-side) so it isn't captured.
-//   Default scrapes ALL (~1346). Set BEX_LIMIT=500 to cap.
+//   Query-based (Phase 2): list pages are cheap, so we page until we have
+//   enough mandate-relevant items (keyword match on title/industry/city),
+//   capped at SCRAPER_MAX_ITEMS (default 150); the expensive per-listing
+//   detail fetches happen only for the kept items.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -18,10 +21,17 @@ const UA =
 const PER_PAGE = 50;
 const DETAIL_CONCURRENCY = 8;
 
-const limitFromEnv = (): number => {
-  if (process.env.BEX_LIMIT === undefined) return Infinity;
-  const n = parseInt(process.env.BEX_LIMIT, 10);
-  return Number.isFinite(n) && n > 0 ? n : Infinity;
+const maxItemsFromEnv = (fallbackEnv: string | undefined): number => {
+  // Per-search cap: SCRAPER_MAX_ITEMS (global) or the scraper-specific legacy
+  // env; a full-site sweep is never allowed in the request path.
+  const n = parseInt(process.env.SCRAPER_MAX_ITEMS ?? fallbackEnv ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 150;
+};
+
+const keywordsOf = (criteria?: SearchCriteria): string[] => {
+  if (!criteria) return [];
+  return [criteria.industry.primary, ...criteria.industry.subSectors, ...criteria.industry.keywords]
+    .join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 };
 
 const headers = { 'Content-Type': 'application/json', Accept: 'application/json', Origin: SITE, 'User-Agent': UA };
@@ -101,13 +111,22 @@ function jwtSellerData(token: string): SellerData | null {
   }
 }
 
-export async function scrapeBusinessEx(_criteria?: SearchCriteria): Promise<RawLead[]> {
-  const limit = limitFromEnv();
+export async function scrapeBusinessEx(criteria?: SearchCriteria): Promise<RawLead[]> {
+  const limit = maxItemsFromEnv(process.env.BEX_LIMIT);
+  const kw = keywordsOf(criteria);
+  const wantCity = (criteria?.location.city || '').trim().toLowerCase();
+  const relevant = (it: ListItem): boolean => {
+    if (wantCity && (it.city || '').toLowerCase().includes(wantCity)) return true;
+    if (kw.length === 0) return true;
+    const hay = `${it.title || ''} ${it.industry || ''} ${it.subindustry || ''} ${it.description || ''}`.toLowerCase();
+    return kw.some((w) => hay.includes(w));
+  };
 
   // --- 1. List (SALE tab) via getBusinessListDemo, page by page ---
   const items: ListItem[] = [];
   let total = Infinity;
-  for (let page = 1; items.length < limit && items.length < total; page++) {
+  const maxPages = Math.max(3, Math.ceil((limit * 4) / PER_PAGE)); // scan up to 4x the cap for matches
+  for (let page = 1; items.length < limit && (page - 1) * PER_PAGE < total && page <= maxPages; page++) {
     let data: { businesslist?: ListItem[]; businessCount?: number };
     try {
       const res = await fetch(`${API}/getBusinessListDemo`, {
@@ -129,6 +148,7 @@ export async function scrapeBusinessEx(_criteria?: SearchCriteria): Promise<RawL
     if (typeof data.businessCount === 'number') total = data.businessCount;
     if (list.length === 0) break;
     for (const it of list) {
+      if (!relevant(it)) continue;
       items.push(it);
       if (items.length >= limit) break;
     }

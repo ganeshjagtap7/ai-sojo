@@ -5,7 +5,8 @@
 // SideProjectors (sideprojectors.com) — PUBLIC side-project/micro-asset
 // marketplace (~11k projects). For-Sale only; pre-revenue excluded
 // (revenue.has_revenue === false).
-//   Default scrapes ALL (complete). Set SP_LIMIT=800 to cap the result.
+//   Query-based (Phase 2): project types derived from the mandate keywords;
+//   capped at SCRAPER_MAX_ITEMS (default 150) per run.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -19,10 +20,17 @@ const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const PAGE_SIZE = 100;
 
-const limitFromEnv = (): number => {
-  if (process.env.SP_LIMIT === undefined) return Infinity; // default: complete (all)
-  const n = parseInt(process.env.SP_LIMIT, 10);
-  return Number.isFinite(n) && n > 0 ? n : Infinity; // SP_LIMIT=800 caps; 0/invalid => all
+const maxItemsFromEnv = (fallbackEnv: string | undefined): number => {
+  // Per-search cap: SCRAPER_MAX_ITEMS (global) or the scraper-specific legacy
+  // env; a full-site sweep is never allowed in the request path.
+  const n = parseInt(process.env.SCRAPER_MAX_ITEMS ?? fallbackEnv ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 150;
+};
+
+const keywordsOf = (criteria?: SearchCriteria): string[] => {
+  if (!criteria) return [];
+  return [criteria.industry.primary, ...criteria.industry.subSectors, ...criteria.industry.keywords]
+    .join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 };
 
 interface Revenue { has_revenue?: boolean; revenue_range?: string }
@@ -46,9 +54,23 @@ interface SPProject {
 const slugify = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const stripHtml = (s: string) => (s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
-async function apiGet(offset: number): Promise<{ projects?: SPProject[]; total?: number }> {
+// Map mandate keywords to the site's own project-type filter so we page
+// through relevant inventory only (falls back to all types).
+function typesFor(criteria?: SearchCriteria): string {
+  const hay = keywordsOf(criteria).join(' ');
+  const picked = new Set<string>();
+  if (/saas|software|b2b|app\b/.test(hay)) picked.add('SaaS');
+  if (/shop|ecommerce|commerce|store|retail/.test(hay)) picked.add('Shop');
+  if (/blog|content|newsletter|media/.test(hay)) picked.add('Blog');
+  if (/mobile|ios|android/.test(hay)) picked.add('Mobile');
+  if (/domain/.test(hay)) picked.add('Domain');
+  if (/website|site/.test(hay)) picked.add('Website');
+  return picked.size ? Array.from(picked).join(',') : TYPES;
+}
+
+async function apiGet(offset: number, types: string): Promise<{ projects?: SPProject[]; total?: number }> {
   const url =
-    `${API}?savedSearchId=all&query=${TOKEN}&postTypes=sell&projectTypes=${encodeURIComponent(TYPES)}` +
+    `${API}?savedSearchId=all&query=${TOKEN}&postTypes=sell&projectTypes=${encodeURIComponent(types)}` +
     `&projectPrice=all&revenue=all&projectDate=all&marketId=all&orderBy=created_at&orderType=desc` +
     `&limit=${PAGE_SIZE}&offset=${offset}`;
   const res = await fetch(url, {
@@ -58,15 +80,16 @@ async function apiGet(offset: number): Promise<{ projects?: SPProject[]; total?:
   return res.json() as Promise<{ projects?: SPProject[]; total?: number }>;
 }
 
-export async function scrapeSideProjectors(_criteria?: SearchCriteria): Promise<RawLead[]> {
-  const limit = limitFromEnv();
+export async function scrapeSideProjectors(criteria?: SearchCriteria): Promise<RawLead[]> {
+  const limit = maxItemsFromEnv(process.env.SP_LIMIT);
+  const types = typesFor(criteria);
   const kept: SPProject[] = [];
   let offset = 0;
   let total = Infinity;
   while (kept.length < limit && offset < total) {
     let data: { projects?: SPProject[]; total?: number };
     try {
-      data = await apiGet(offset);
+      data = await apiGet(offset, types);
     } catch (e) {
       console.error(`[SideProjectors] fetch failed at offset ${offset}: ${(e as Error).message}`);
       break;

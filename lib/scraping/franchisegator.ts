@@ -6,7 +6,8 @@
 // instead. Every franchise has ONE detail page regardless of state, so "all
 // locations" = the full directory: ~3869 /franchises/<slug>/ URLs in
 // sitemap-profiles.xml. Detail pages are plain SSR (no Cloudflare).
-//   Default scrapes ALL (~3869). Set FG_LIMIT=300 to cap.
+//   Query-based (Phase 2): sitemap slugs matching the mandate's industry
+//   keywords are fetched first, capped at SCRAPER_MAX_ITEMS (default 150).
 
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -16,10 +17,17 @@ const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const CONCURRENCY = 10;
 
-const limitFromEnv = (): number => {
-  if (process.env.FG_LIMIT === undefined) return Infinity;
-  const n = parseInt(process.env.FG_LIMIT, 10);
-  return Number.isFinite(n) && n > 0 ? n : Infinity;
+const maxItemsFromEnv = (fallbackEnv: string | undefined): number => {
+  // Per-search cap: SCRAPER_MAX_ITEMS (global) or the scraper-specific legacy
+  // env; a full-site sweep is never allowed in the request path.
+  const n = parseInt(process.env.SCRAPER_MAX_ITEMS ?? fallbackEnv ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 150;
+};
+
+const keywordsOf = (criteria?: SearchCriteria): string[] => {
+  if (!criteria) return [];
+  return [criteria.industry.primary, ...criteria.industry.subSectors, ...criteria.industry.keywords]
+    .join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 };
 
 const clean = (s: string | undefined): string =>
@@ -39,14 +47,18 @@ function field(html: string, label: string): string {
   return m ? clean(m[1]).replace(/\s*What does .*?mean\?.*$/i, '').trim() : '';
 }
 
-export async function scrapeFranchiseGator(_criteria?: SearchCriteria): Promise<RawLead[]> {
-  const limit = limitFromEnv();
+export async function scrapeFranchiseGator(criteria?: SearchCriteria): Promise<RawLead[]> {
+  const limit = maxItemsFromEnv(process.env.FG_LIMIT);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 
   // --- 1. Enumerate franchise URLs from the profiles sitemap ---
   const xml = await (await fetch(SITEMAP, { headers })).text();
   const urls = Array.from(new Set(Array.from(xml.matchAll(/<loc>([^<]*\/franchises\/[a-z0-9-]+\/)<\/loc>/gi)).map((m) => m[1])));
-  const targets = urls.slice(0, limit === Infinity ? urls.length : limit);
+  // Mandate-relevant slugs first (slug ≈ franchise name), then the rest.
+  const kw = keywordsOf(criteria);
+  const matches = kw.length ? urls.filter((u) => kw.some((w) => u.includes(w))) : [];
+  const rest = urls.filter((u) => !matches.includes(u));
+  const targets = [...matches, ...rest].slice(0, limit);
   console.log(`[FranchiseGator] franchises in sitemap: ${urls.length}; fetching ${targets.length}…`);
 
   // --- 2. Fetch + parse each detail page ---

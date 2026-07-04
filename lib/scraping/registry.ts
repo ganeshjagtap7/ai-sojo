@@ -12,7 +12,7 @@ export interface SourceDef {
   id: RawLead['source'];
   label: string;
   /** Where this source's inventory lives. */
-  region: 'us' | 'india' | 'global';
+  region: 'us' | 'india' | 'canada' | 'global';
   /** What kind of leads it produces — drives routing. */
   kind: 'local_business' | 'deal_listing' | 'micro_saas' | 'franchise' | 'niche_directory';
   /** Industry fit: 'any' matches everything, 'digital' requires a digital
@@ -134,8 +134,9 @@ export const SOURCES: SourceDef[] = [
     run: async ({ criteria }) => (await import('@/lib/scraping/hvacinformed')).scrapeHvacInformed(criteria),
   },
   {
-    id: 'esa', label: 'ESA Contractors', region: 'us', kind: 'niche_directory',
-    industries: ['security', 'alarm', 'fire'], runtime: 'inline', gated: false, enabled: true,
+    // Ontario (Canada) Electrical Safety Authority licence directory.
+    id: 'esa', label: 'ESA Contractors', region: 'canada', kind: 'niche_directory',
+    industries: ['electrical', 'electric', 'electrician'], runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/esaContractors')).scrapeEsaContractors(criteria),
   },
   {

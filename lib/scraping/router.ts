@@ -23,6 +23,11 @@ function isIndia(loc: SearchCriteria['location']): boolean {
   return loc.country.trim().toLowerCase() === 'india';
 }
 
+function isCanada(loc: SearchCriteria['location']): boolean {
+  const c = loc.country.trim().toLowerCase();
+  return c === 'canada' || c === 'ca';
+}
+
 function industryTagMatch(tags: string[], industry: SearchCriteria['industry']): boolean {
   const hay = industryHaystack(industry);
   return tags.some((t) => hay.includes(t));
@@ -50,6 +55,7 @@ export function selectSources(criteria: SearchCriteria): SourceDef[] {
     if (s.alwaysRun) return false;
     if (s.region === 'us' && !isUS(criteria.location)) return false;
     if (s.region === 'india' && !isIndia(criteria.location)) return false;
+    if (s.region === 'canada' && !isCanada(criteria.location)) return false;
     if (s.industries === 'digital' && !digital) return false;
     if (Array.isArray(s.industries) && !industryTagMatch(s.industries, criteria.industry)) return false;
     if (s.kind === 'local_business' && (digital || !criteria.location.city)) return false;
