@@ -15,6 +15,7 @@ const SITEMAP = `${SITE}/sitemap-0.xml`;
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const CONCURRENCY = 10;
+const PER_PAGE = 25; // notional listing-page size for the SCRAPER_MAX_PAGES cap
 
 const limitFromEnv = (): number => {
   if (process.env.TMRR_LIMIT === undefined) return Infinity;
@@ -117,16 +118,23 @@ function extractStartup(big: string, slug: string): Startup | null {
   );
 }
 
+// CRITERIA-AWARE (Phase 2): TrustMRR's browse is account-gated and the public
+// sitemap has no per-industry/location structure — site has no usable search. So
+// we page-cap: fetch at most SCRAPER_MAX_PAGES * PER_PAGE detail pages instead of
+// the whole ~4772-startup sitemap. TMRR_LIMIT still caps. Router sends it only for
+// digital searches; downstream dedupe/rank do the filtering.
 export async function scrapeTrustMRR(_criteria?: SearchCriteria): Promise<RawLead[]> {
   const limit = limitFromEnv();
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
+  const cap = Math.min(limit, maxPages * PER_PAGE);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 
   // --- 1. Enumerate startup slugs from the public sitemap ---
   const sm = await fetch(SITEMAP, { headers });
   const xml = await sm.text();
   const slugs = Array.from(new Set(Array.from(xml.matchAll(/\/startup\/([a-z0-9-]+)</gi)).map((m) => m[1])));
-  const targets = slugs.slice(0, limit === Infinity ? slugs.length : limit);
-  console.log(`[TrustMRR] sitemap startups: ${slugs.length}; fetching ${targets.length} detail pages…`);
+  const targets = slugs.slice(0, cap === Infinity ? slugs.length : cap);
+  console.log(`[TrustMRR] sitemap startups: ${slugs.length}; fetching ${targets.length} (cap ${cap}) detail pages…`);
 
   // --- 2. Fetch + parse each public detail page ---
   const out: RawLead[] = [];
