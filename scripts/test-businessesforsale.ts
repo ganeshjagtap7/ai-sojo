@@ -1,8 +1,13 @@
 /**
  * Local test for the BusinessesForSale.com (US) scraper. Writes businessesforsale-leads.xlsx.
  *
- * Run:  BFSALE_LIMIT=500 npx tsx scripts/test-businessesforsale.ts   (cap ~500)
- *       npx tsx scripts/test-businessesforsale.ts                     (ALL ~16k — long)
+ * CRITERIA-AWARE (Phase 2): targets the site's own search URL from industry + state,
+ * capped by SCRAPER_MAX_PAGES (default 3). Defaults to plumbing / GA.
+ *
+ * Run:  npx tsx scripts/test-businessesforsale.ts                          (plumbing, GA)
+ *       BFS_INDUSTRY=restaurant BFS_STATE=CA npx tsx scripts/test-businessesforsale.ts
+ *       BFS_INDUSTRY= BFS_STATE= npx tsx scripts/test-businessesforsale.ts (generic feed)
+ *       SCRAPER_MAX_PAGES=1 npx tsx scripts/test-businessesforsale.ts      (1 page only)
  *
  * US listings only. Businesses + franchises (Type column). List-only (detail pages
  * are Cloudflare-blocked, but the cards carry the same data). USD prices kept as the
@@ -11,10 +16,25 @@
 import { join } from 'path';
 import * as XLSX from 'xlsx';
 import { scrapeBusinessesForSale } from '../lib/scraping/businessesforsale';
+import { SearchCriteria } from '../lib/types';
+
+function crit(over: Partial<{ state: string; primary: string }>): SearchCriteria {
+  return {
+    location: { city: '', state: over.state ?? '', country: 'US', radiusMiles: 25 },
+    industry: { primary: over.primary ?? '', subSectors: [], keywords: [] },
+    businessSize: { revenueMin: null, revenueMax: null, employeeMin: null, employeeMax: null },
+    preferences: { businessAgeYears: null, ownerOperated: null, disqualifiers: [] },
+    searcherType: 'self_funded',
+  };
+}
 
 async function main() {
-  console.log('Scraping us.businessesforsale.com (list pages)…');
-  const leads = await scrapeBusinessesForSale();
+  const criteria = crit({
+    primary: process.env.BFS_INDUSTRY ?? 'plumbing',
+    state: process.env.BFS_STATE ?? 'GA',
+  });
+  console.log(`Scraping us.businessesforsale.com — industry="${criteria.industry.primary}" state="${criteria.location.state}"…`);
+  const leads = await scrapeBusinessesForSale(criteria);
   if (leads.length === 0) {
     console.log('No listings — the list markup may have changed.');
     return;

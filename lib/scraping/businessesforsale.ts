@@ -4,16 +4,39 @@
 // DETAIL pages are Cloudflare-protected (403), but the LIST pages are open + fully
 // server-rendered, and each card already carries everything the detail shows: title,
 // location, type, Asking Price / Revenue / Cash Flow (or Franchise Fee / Investment),
-// a description snippet, and the detail URL. So we scrape the list only — paginated
-// at /us/search/businesses-for-sale-<N> — and never touch the blocked detail pages.
-// (The detail page's financials are the SAME ranges as the card; it would add only
-//  the full-length description, not worth driving a browser through Cloudflare 16k×.)
-//   Default scrapes ALL (~16k, long). Set BFSALE_LIMIT=500 to cap.
+// a description snippet, and the detail URL. So we scrape the list only and never
+// touch the blocked detail pages.
+//
+// CRITERIA-AWARE (Phase 2): the site's category slugs are NOT uniform
+// ("plumbing-businesses-for-sale" but "restaurants-for-sale"), so instead of
+// guessing a category slug we use the generic feed's two reliable, verified-live
+// knobs — a location slug in the path and a free-text `keywords` query param:
+//   state only       → /us/search/businesses-for-sale-in-georgia
+//   state + industry → /us/search/businesses-for-sale-in-georgia?keywords=plumbing
+//   industry only    → /us/search/businesses-for-sale?keywords=plumbing
+//   generic feed     → /us/search/businesses-for-sale
+//   pagination       → append "-<N>" to the path (before the query): …-in-georgia-2?keywords=…
+// Page count is capped by SCRAPER_MAX_PAGES (default 3); BFSALE_LIMIT still caps cards.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { stateFullName } from '@/lib/utils/usStates';
 
-const BASE = 'https://us.businessesforsale.com/us/search/businesses-for-sale';
 const SITE = 'https://us.businessesforsale.com';
+
+const slug = (s: string) =>
+  s.toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/**
+ * Maps criteria to the site's own search: a base path (with optional location
+ * slug) and a keywords query. Pagination appends "-<N>" to `path`, then `query`.
+ */
+function buildSearch(criteria?: SearchCriteria): { path: string; query: string } {
+  const state = criteria?.location.state ? slug(stateFullName(criteria.location.state)) : '';
+  const industry = criteria?.industry.primary?.trim() || '';
+  const path = state ? `/us/search/businesses-for-sale-in-${state}` : '/us/search/businesses-for-sale';
+  const query = industry ? `?keywords=${encodeURIComponent(industry)}` : '';
+  return { path, query };
+}
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -103,8 +126,11 @@ function parseCards(html: string): Card[] {
   return cards;
 }
 
-export async function scrapeBusinessesForSale(_criteria?: SearchCriteria): Promise<RawLead[]> {
+export async function scrapeBusinessesForSale(criteria?: SearchCriteria): Promise<RawLead[]> {
   const limit = limitFromEnv();
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
+  const { path, query } = buildSearch(criteria);
+  console.log(`[BForSale] search: ${path}${query} (max ${maxPages} pages)`);
   const headers = {
     'User-Agent': UA,
     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -113,8 +139,8 @@ export async function scrapeBusinessesForSale(_criteria?: SearchCriteria): Promi
 
   const cards: Card[] = [];
   const seen = new Set<string>();
-  for (let page = 1; cards.length < limit; page++) {
-    const url = page === 1 ? BASE : `${BASE}-${page}`;
+  for (let page = 1; cards.length < limit && page <= maxPages; page++) {
+    const url = page === 1 ? `${SITE}${path}${query}` : `${SITE}${path}-${page}${query}`;
     let html: string;
     try {
       const res = await fetch(url, { headers });
