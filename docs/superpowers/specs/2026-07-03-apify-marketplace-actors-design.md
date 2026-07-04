@@ -17,10 +17,10 @@ When a user runs a search in ai-sojo, the search pipeline currently scrapes Goog
 | 2 | Flippa | Sites, apps, content, domains | Confirmed: `parseforge/flippa-scraper` |
 | 3 | BizBuySell | US SMB (largest US marketplace) | Confirmed: `acquistion-automation/bizbuysell-scraper` |
 | 4 | Empire Flippers | Curated/vetted SaaS & content | Confirmed: `piotrv1001/empire-flippers-scraper` |
-| 5 | BizQuest | US SMB (BizBuySell sister site) | Slug unconfirmed (`shahidirfan/...`) — verify |
-| 6 | SMERGERS | India + international SME M&A | Slug unconfirmed (`shahidirfan/...`) — verify |
-| 7 | LoopNet / Crexi | US commercial RE + business-with-property | Slug unconfirmed — verify |
-| 8 | IBBA Member Directory | US broker aggregator (2,800+ brokers) | Slug unconfirmed — verify |
+| 5 | BizQuest | US SMB (BizBuySell sister site) | **Verified 2026-07-04:** `parseforge/bizquest-scraper` (updated 2026-05-08; filters: location/industry/price/cash-flow) |
+| 6 | SMERGERS | India + international SME M&A | **Found 2026-07-04:** Lexis Solutions (certified Apify partner) lists a "Smergers Business Listing Scraper" — confirm exact slug in the Apify console (search "smergers") before building |
+| 7 | LoopNet / Crexi | US commercial RE + business-with-property | **Verified 2026-07-04:** `parseforge/loopnet-scraper` (pay-per-result ~$0.005/property); avoid `epctex/loopnet-scraper` (DEPRECATED) |
+| 8 | IBBA Member Directory | US broker aggregator (2,800+ brokers) | **Verified 2026-07-04:** `jungle_synthesizer/business-broker-directory-scraper` (26 fields/broker, 99.9% email coverage, ~$2.90 full pull, state/industry filters) |
 
 Marketplace results are **merged into the existing ranked results list** (same dedupe → enrich → rank flow), not shown in a separate tab. Listings carry extra deal fields (asking price, revenue, profit, listing URL) that render when present.
 
@@ -125,10 +125,14 @@ export interface MarketplaceSource {
 - Parse money strings (`"$1.2M"`, `"₹3.5 Cr"`, `"AU$40k"`) into USD numbers; keep the original in `rawData`. Use a shared `parseMoney(value, defaultCurrency)` util in `lib/utils/` with unit tests. SMERGERS amounts default INR; Flippa can be multi-currency. Use a fixed conversion table in code (comment the rates + date); precision is not critical for ranking.
 - Skip items with no title AND no listing URL. Never throw on a single bad item — skip and `console.warn` with source + index.
 
-**Alternative actors (fallbackSlugs), from the research table:**
+**Alternative actors (fallbackSlugs), from the research table + store verification (2026-07-04):**
 - acquire: `jungle_synthesizer/acquire-scraper`, `igolaizola/acquire-scraper`, `crawlerbros/acquire-scraper`
 - flippa: `epicscrapers/flippa-scraper`, `deltaspider/flippa-scraper`, `piotrv1001/flippa-advanced-scraper`
-- bizbuysell: `memo23/apify-bizbuysell-cheerio`, `good_cheap/bizbuysell-scraper`, `shahidirfan/bizbuysell-scraper`
+- bizbuysell: `memo23/apify-bizbuysell-cheerio`, `good_cheap/bizbuysell-scraper`, `shahidirfan/bizbuysell-scraper`, `lexis-solutions/bizubuysell` (note: primary `acquistion-automation/bizbuysell-scraper` is $45/mo rental + usage — most expensive of the eight; compare fallbacks before committing)
+- bizquest: `memo23/bizquest-scraper`, `powerai/bizquest-search-scraper`
+- loopnet: `memo23/apify-loopnet-search-cheerio`, `crawlerbros/loopnet-scraper`, `piotrv1001/loopnet-listings-scraper`
+
+**Verified actor pricing snapshot (2026-07-04, re-check at build time):** acquire $0.10/listing · flippa pay-per-event (updated 2026-05-05, rated 5.0) · bizbuysell $45/mo + $0.50/run + $0.006/listing (614 users, the most battle-tested) · empire flippers $5/mo · bizquest pay-per-event · loopnet ~$0.005/property · ibba ~$0.001/record. ParseForge maintains three of the eight (flippa, bizquest, loopnet) — one developer relationship covers 3 sources.
 
 ---
 
@@ -234,8 +238,10 @@ Before coding each mapper: run the actor once from the Apify console with a real
 
 ### Phase 2 — verify + add remaining 4
 
+**Update 2026-07-04: store verification done.** BizQuest, LoopNet, and IBBA have verified live actors (see §1 table); SMERGERS has a likely actor from Lexis Solutions needing an exact-slug check. So step 1 shrinks to: run each actor once from the console with a realistic input to validate the output schema before writing its mapper.
+
 For each of **bizquest, smergers, loopnet, ibba**:
-1. Find the actor in the Apify store; confirm the slug, last-maintained date, pricing, and run it once with a realistic input. If no working actor exists, report back — do **not** build a custom scraper under this spec (that's a separate task; note `apify/playwright-scraper`/Scrapy fallbacks exist per research but are out of scope).
+1. Run the verified actor (§1 table) once with a realistic input; save the output as the test fixture. If a run fails or the actor turns out unmaintained, try the fallbacks (§4) — do **not** build a custom scraper under this spec (that's a separate task; note `apify/playwright-scraper`/Scrapy fallbacks exist per research but are out of scope).
 2. Add registry entry + mapper + fixture + tests (same acceptance pattern as Phase 1).
 3. LoopNet/Crexi: LoopNet actor first; Crexi only if trivially available via the same pattern — otherwise drop Crexi and note it.
 4. IBBA returns **brokers**, not listings: map to `RawLead` with `source: 'ibba'`, broker firm as `businessName`, contact info into normal fields, `deal` only containing `listingUrl` (directory profile URL). Selector already restricts it to thin-result searches.
