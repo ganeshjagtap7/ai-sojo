@@ -15,6 +15,7 @@ const SITEMAP = `${SITE}/sitemap-profiles.xml`;
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const CONCURRENCY = 10;
+const PER_PAGE = 25; // notional listing-page size for the SCRAPER_MAX_PAGES cap
 
 const limitFromEnv = (): number => {
   if (process.env.FG_LIMIT === undefined) return Infinity;
@@ -39,15 +40,22 @@ function field(html: string, label: string): string {
   return m ? clean(m[1]).replace(/\s*What does .*?mean\?.*$/i, '').trim() : '';
 }
 
+// CRITERIA-AWARE (Phase 2): FranchiseGator profiles come from a flat sitemap with
+// no per-industry/state listing pages to target, and franchises are national (not
+// location-bound). So we page-cap: fetch at most SCRAPER_MAX_PAGES * PER_PAGE
+// profile pages instead of the whole ~3869-entry sitemap. The router only sends
+// FranchiseGator for franchise searches. (Future: map criteria → category pages.)
 export async function scrapeFranchiseGator(_criteria?: SearchCriteria): Promise<RawLead[]> {
   const limit = limitFromEnv();
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
+  const cap = Math.min(limit, maxPages * PER_PAGE);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 
   // --- 1. Enumerate franchise URLs from the profiles sitemap ---
   const xml = await (await fetch(SITEMAP, { headers })).text();
   const urls = Array.from(new Set(Array.from(xml.matchAll(/<loc>([^<]*\/franchises\/[a-z0-9-]+\/)<\/loc>/gi)).map((m) => m[1])));
-  const targets = urls.slice(0, limit === Infinity ? urls.length : limit);
-  console.log(`[FranchiseGator] franchises in sitemap: ${urls.length}; fetching ${targets.length}…`);
+  const targets = urls.slice(0, cap === Infinity ? urls.length : cap);
+  console.log(`[FranchiseGator] franchises in sitemap: ${urls.length}; fetching ${targets.length} (cap ${cap})…`);
 
   // --- 2. Fetch + parse each detail page ---
   const out: RawLead[] = [];
