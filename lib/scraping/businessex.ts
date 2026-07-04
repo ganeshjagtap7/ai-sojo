@@ -101,13 +101,20 @@ function jwtSellerData(token: string): SellerData | null {
   }
 }
 
+// CRITERIA-AWARE (Phase 2): getBusinessListDemo accepts state/city/industrymain
+// filter arrays, but they require BusinessEx's own taxonomy IDs (not free text),
+// so we don't populate them here — page-cap only. We fetch at most
+// SCRAPER_MAX_PAGES pages instead of the whole SALE tab. The router only sends
+// BusinessEx for India searches; downstream dedupe/rank do the filtering.
+// (Future: resolve criteria → BusinessEx industry/state IDs and pass them here.)
 export async function scrapeBusinessEx(_criteria?: SearchCriteria): Promise<RawLead[]> {
   const limit = limitFromEnv();
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
 
   // --- 1. List (SALE tab) via getBusinessListDemo, page by page ---
   const items: ListItem[] = [];
   let total = Infinity;
-  for (let page = 1; items.length < limit && items.length < total; page++) {
+  for (let page = 1; items.length < limit && items.length < total && page <= maxPages; page++) {
     let data: { businesslist?: ListItem[]; businessCount?: number };
     try {
       const res = await fetch(`${API}/getBusinessListDemo`, {
