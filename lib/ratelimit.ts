@@ -44,17 +44,28 @@ export async function checkRateLimit(
   key: RateLimitKey,
 ): Promise<{ allowed: boolean; remaining: number; limit: number }> {
   const limit = limitFor(key);
-  const supabase = createServiceClient();
 
-  const { data, error } = await supabase.rpc('increment_daily_usage', {
-    p_user_id: userId,
-    p_key: key,
-    p_limit: limit,
-  });
+  let data: unknown, error: unknown;
+  try {
+    const supabase = createServiceClient();
+    ({ data, error } = await supabase.rpc('increment_daily_usage', {
+      p_user_id: userId,
+      p_key: key,
+      p_limit: limit,
+    }));
+  } catch (err) {
+    // createServiceClient throws on missing env — a config error, not a
+    // transient one. Still fail open (never lock users out over our own
+    // misconfig) but make the cause unmissable in the function logs.
+    console.error(`[ratelimit] SERVICE CLIENT MISCONFIGURED — quota NOT enforcing (key=${key}):`, err);
+    return { allowed: true, remaining: limit, limit };
+  }
 
   if (error || typeof data !== 'number') {
     // Fail open on transient errors so a DB hiccup doesn't lock everyone out.
-    console.error(`[ratelimit] increment_daily_usage failed (key=${key}):`, error);
+    // If this appears on every request, check SUPABASE_SERVICE_ROLE_KEY and
+    // that migrations 0002/0003 (increment_daily_usage RPC) are applied.
+    console.error(`[ratelimit] increment_daily_usage failed — quota NOT enforcing (key=${key}):`, error);
     return { allowed: true, remaining: limit, limit };
   }
 
