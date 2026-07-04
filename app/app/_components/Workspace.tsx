@@ -38,6 +38,7 @@ type ScreenState =
   | { kind: 'initial-loading' }
   | { kind: 'idle' }
   | { kind: 'running'; label: string; sub: string }
+  | { kind: 'empty-thesis' }
   | { kind: 'failed'; error: string };
 
 type FilterTab = 'all' | 'top' | 'saved';
@@ -66,14 +67,33 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
   const [parseError, setParseError] = useState<string | null>(null);
   const kickedRef = useRef(false);
 
+  const thesisIsEmpty =
+    Object.keys(thesis.facts ?? {}).length === 0 && Object.keys(thesis.buckets ?? {}).length === 0;
+
   // Auto-kick the initial search if the user has a thesis but no searches.
+  // A thesis with no captured answers (issue #11) would search for nothing —
+  // show the rebuild prompt instead of burning a doomed search.
   useEffect(() => {
     if (kickedRef.current) return;
     if (searches.length > 0) return;
     kickedRef.current = true;
+    if (thesisIsEmpty) {
+      setScreen({ kind: 'empty-thesis' });
+      return;
+    }
     runSearch({ query: null, criteriaOverride: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function onRebuildThesis() {
+    try {
+      await fetch('/api/app/redo-thesis', { method: 'POST' });
+    } catch {
+      // Even if deactivation fails, send them to the wizard — a new save
+      // deactivates the old thesis anyway.
+    }
+    window.location.href = '/';
+  }
 
   async function runSearch(input: { query: string | null; criteriaOverride: Partial<SearchCriteria> | null }) {
     // Refinement re-runs get refine copy; a plain (or auto-kicked first) search
@@ -307,6 +327,18 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
         <div className="results-body">
           {screen.kind === 'initial-loading' && <SearchingPanel label="Finding your matches" sub="Scanning Google Maps, BBB, and the open web. Usually takes 15–60 seconds." />}
           {screen.kind === 'running' && <SearchingPanel label={screen.label} sub={screen.sub} />}
+          {screen.kind === 'empty-thesis' && (
+            <div className="searching">
+              <h2 className="searching-title">Your thesis is <em>empty</em>.</h2>
+              <p className="searching-sub">
+                No industry or location was saved from onboarding, so there&apos;s nothing to search yet.
+                Rebuild your thesis — or just type a full mandate below (e.g. &quot;HVAC business in Atlanta under $5M&quot;).
+              </p>
+              <button className="btn-primary" type="button" onClick={onRebuildThesis}>
+                Rebuild thesis
+              </button>
+            </div>
+          )}
           {screen.kind === 'failed' && (
             <div className="searching">
               <h2 className="searching-title">Search <em>failed</em>.</h2>
@@ -357,12 +389,12 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
           )}
         </div>
 
-        {searches.length > 0 && screen.kind !== 'running' && screen.kind !== 'initial-loading' && (
+        {screen.kind !== 'running' && screen.kind !== 'initial-loading' && (
           <div className="refine-dock">
             <div className="refine-composer">
               <div className="refine-head">
                 <div className="refine-title">
-                  Sojo · <em>refine your search</em>
+                  Sojo · <em>search any mandate</em>
                 </div>
               </div>
               {parsed && (
@@ -395,7 +427,7 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
                         onSubmitRefine();
                       }
                     }}
-                    placeholder='Describe the change in plain English — e.g. "HVAC in Atlanta under $5M rev"'
+                    placeholder='Type any mandate in plain English — e.g. "HVAC business in Atlanta under $5M"'
                     disabled={refining}
                   />
                   <button type="button" className="send-btn" onClick={onSubmitRefine} disabled={refining || !refineQuery.trim()}>
