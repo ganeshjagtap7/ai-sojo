@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 
+// DB-only route — colocate with Supabase (Mumbai) for India-based users (#12).
+export const preferredRegion = 'bom1';
+
 // Soft-deactivate the user's currently active thesis so a fresh onboarding run
 // can write a new active row. Old searches stay linked to the deactivated row;
 // they remain readable but won't surface as the workspace's active context.

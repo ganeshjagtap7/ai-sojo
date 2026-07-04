@@ -4,6 +4,9 @@ import type { RankedLead } from '@/lib/types';
 import { SavedView, type SavedRow } from '../_components/SavedView';
 
 export const dynamic = 'force-dynamic';
+// Serve near the Supabase DB (Mumbai) — these pages are pure DB reads, and the
+// team is in India; iad1 would add two ocean round-trips per navigation (#12).
+export const preferredRegion = 'bom1';
 
 interface DbRow {
   id: string;
