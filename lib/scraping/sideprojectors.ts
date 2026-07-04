@@ -58,12 +58,18 @@ async function apiGet(offset: number): Promise<{ projects?: SPProject[]; total?:
   return res.json() as Promise<{ projects?: SPProject[]; total?: number }>;
 }
 
+// CRITERIA-AWARE (Phase 2): the API's projectTypes filter is already digital-only
+// (the router only sends SideProjectors for digital searches), and there is no
+// per-industry query beyond that. So we page-cap: scan at most SCRAPER_MAX_PAGES
+// pages (100/page) instead of the whole ~11k catalogue. SP_LIMIT still caps kept.
 export async function scrapeSideProjectors(_criteria?: SearchCriteria): Promise<RawLead[]> {
   const limit = limitFromEnv();
+  const maxPages = Math.max(1, parseInt(process.env.SCRAPER_MAX_PAGES || '3', 10));
+  const maxOffset = maxPages * PAGE_SIZE;
   const kept: SPProject[] = [];
   let offset = 0;
   let total = Infinity;
-  while (kept.length < limit && offset < total) {
+  while (kept.length < limit && offset < total && offset < maxOffset) {
     let data: { projects?: SPProject[]; total?: number };
     try {
       data = await apiGet(offset);
