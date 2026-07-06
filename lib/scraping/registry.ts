@@ -161,6 +161,15 @@ export const SOURCES: SourceDef[] = [
       return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
     },
   },
+  {
+    id: 'businessdeals', label: 'BusinessDeals.in', region: 'india', kind: 'deal_listing',
+    industries: 'any', runtime: 'apify', gated: false, enabled: true,
+    run: async () => {
+      const slug = process.env.BUSINESSDEALS_ACTOR;
+      if (!slug) throw new Error('BUSINESSDEALS_ACTOR not set — deploy the businessdeals Apify actor and set its slug');
+      return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+    },
+  },
   // ── Playwright sources — DISABLED until each has an Apify actor (Phase 4) ─
   // runtime:'apify' means "will be called via Apify"; run() throws until then.
   ...([
@@ -170,7 +179,6 @@ export const SOURCES: SourceDef[] = [
     ['tobuz', 'Tobuz', 'india', 'deal_listing', 'any'],
     ['trustpilot', 'Trustpilot', 'global', 'niche_directory', 'any'],
     ['investorsclub', 'Investors Club', 'global', 'micro_saas', 'digital'],
-    ['businessdeals', 'BusinessDeals.in', 'india', 'deal_listing', 'any'],
     ['startupage', 'StartuPage', 'global', 'micro_saas', 'digital'],
     ['motioninvest', 'Motion Invest', 'global', 'micro_saas', 'digital'],
   ] as const).map(([id, label, region, kind, industries]): SourceDef => ({
