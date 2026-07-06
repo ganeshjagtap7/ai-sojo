@@ -100,7 +100,36 @@
   background: var(--ink); color: var(--bg);
   display: grid; place-items: center;
   font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+  border: none; padding: 0; cursor: pointer;
+  transition: box-shadow 140ms;
 }
+.sojo .avatar:hover { box-shadow: 0 0 0 3px var(--bg-soft); }
+.sojo .avatar[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 25%, transparent); }
+
+/* Profile dropdown -------------------------------------------------------- */
+.sojo .profile { position: relative; display: flex; align-items: center; }
+.sojo .profile-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 220px; padding: 6px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 14px 36px rgba(26, 25, 24, 0.16);
+  z-index: 50;
+  animation: sojo-menu-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sojo-menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.sojo .profile-menu-head { padding: 8px 10px 6px; }
+.sojo .profile-menu-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); }
+.sojo .profile-menu-email { font-size: 12.5px; color: var(--ink); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sojo .profile-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+.sojo .profile-menu-item {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 8px;
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--ink); text-align: left;
+  transition: background 140ms;
+}
+.sojo .profile-menu-item:hover { background: var(--bg-soft); }
+.sojo .profile-menu-item svg { width: 15px; height: 15px; color: var(--muted); }
 
 /* Main + results ---------------------------------------------------------- */
 .sojo .main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
