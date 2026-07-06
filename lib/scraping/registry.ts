@@ -197,11 +197,19 @@ export const SOURCES: SourceDef[] = [
       return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
     },
   },
+  {
+    id: 'tobuz', label: 'Tobuz', region: 'india', kind: 'deal_listing',
+    industries: 'any', runtime: 'apify', gated: false, enabled: true,
+    run: async () => {
+      const slug = process.env.TOBUZ_ACTOR;
+      if (!slug) throw new Error('TOBUZ_ACTOR not set — deploy the tobuz Apify actor and set its slug');
+      return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+    },
+  },
   // ── Playwright sources — DISABLED until each has an Apify actor (Phase 4) ─
   // runtime:'apify' means "will be called via Apify"; run() throws until then.
   ...([
     ['quietlight', 'Quiet Light', 'us', 'deal_listing', 'digital'],
-    ['tobuz', 'Tobuz', 'india', 'deal_listing', 'any'],
     ['trustpilot', 'Trustpilot', 'global', 'niche_directory', 'any'],
     ['startupage', 'StartuPage', 'global', 'micro_saas', 'digital'],
     ['motioninvest', 'Motion Invest', 'global', 'micro_saas', 'digital'],
