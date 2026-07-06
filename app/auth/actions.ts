@@ -1,47 +1,50 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
-async function getOrigin(): Promise<string> {
-  const h = await headers();
-  const origin = h.get('origin');
-  if (origin) return origin;
-  const host = h.get('x-forwarded-host') ?? h.get('host');
-  const proto = h.get('x-forwarded-proto') ?? 'https';
-  return host ? `${proto}://${host}` : '';
+// Only allow relative redirects (guard against open-redirect via ?next=).
+function safeNext(raw: string, fallback: string): string {
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : fallback;
 }
 
-// Magic-link signup/login. Single action — Supabase creates the user on first
-// click of the link if they don't exist yet. `next` is where the user lands
-// after the auth/callback PKCE exchange.
-export async function sendMagicLink(formData: FormData) {
+// Email + password sign-in. Consistent with the wizard's auth gate; magic links
+// were dropped so there's a single auth method across the app.
+export async function loginWithPassword(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim();
-  const next = String(formData.get('next') ?? '/app/onboarding');
-  const intent = String(formData.get('intent') ?? 'signup'); // 'signup' | 'login'
+  const password = String(formData.get('password') ?? '');
+  const next = safeNext(String(formData.get('next') ?? '/app'), '/app');
 
-  if (!email) {
-    redirect(`/${intent}?error=${encodeURIComponent('Email is required')}`);
+  if (!email || !password) {
+    redirect(`/login?error=${encodeURIComponent('Email and password are required')}&next=${encodeURIComponent(next)}`);
   }
 
   const supabase = await createClient();
-  const origin = await getOrigin();
-  const emailRedirectTo = origin
-    ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
-    : undefined;
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo },
-  });
-
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect(`/${intent}?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
+  }
+  redirect(next);
+}
+
+// Email + password sign-up. Email confirmation is disabled in the Supabase
+// project, so signUp returns an active session immediately — no email step.
+export async function signupWithPassword(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
+  const next = safeNext(String(formData.get('next') ?? '/app/onboarding'), '/app/onboarding');
+
+  if (!email || !password) {
+    redirect(`/signup?error=${encodeURIComponent('Email and password are required')}&next=${encodeURIComponent(next)}`);
   }
 
-  redirect(`/${intent}?message=${encodeURIComponent('Check your email for the sign-in link.')}`);
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    redirect(`/signup?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
+  }
+  redirect(next);
 }
 
 export async function logout() {
