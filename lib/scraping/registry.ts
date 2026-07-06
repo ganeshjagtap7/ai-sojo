@@ -206,16 +206,24 @@ export const SOURCES: SourceDef[] = [
       return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
     },
   },
+  {
+    id: 'trustpilot', label: 'Trustpilot', region: 'global', kind: 'niche_directory',
+    industries: 'any', runtime: 'apify', gated: false, enabled: true,
+    run: async () => {
+      const slug = process.env.TRUSTPILOT_ACTOR;
+      if (!slug) throw new Error('TRUSTPILOT_ACTOR not set — deploy the trustpilot Apify actor and set its slug');
+      return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+    },
+  },
   // ── Playwright sources — DISABLED until each has an Apify actor (Phase 4) ─
   // runtime:'apify' means "will be called via Apify"; run() throws until then.
   ...([
     ['quietlight', 'Quiet Light', 'us', 'deal_listing', 'digital'],
-    ['trustpilot', 'Trustpilot', 'global', 'niche_directory', 'any'],
     ['startupage', 'StartuPage', 'global', 'micro_saas', 'digital'],
     ['motioninvest', 'Motion Invest', 'global', 'micro_saas', 'digital'],
   ] as const).map(([id, label, region, kind, industries]): SourceDef => ({
     id: id as RawLead['source'], label, region, kind,
-    industries: industries === 'any' ? 'any' : 'digital',
+    industries,
     runtime: 'apify',
     gated: id === 'startupage' || id === 'motioninvest',
     enabled: false,
