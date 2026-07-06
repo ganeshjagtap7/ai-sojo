@@ -1,0 +1,10 @@
+{
+  "actorSpecification": 1,
+  "name": "indiabiz",
+  "title": "IndiaBizForSale Scraper",
+  "description": "Scrapes India SME listings from indiabizforsale.com into RawLead-shaped items.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile"
+}
