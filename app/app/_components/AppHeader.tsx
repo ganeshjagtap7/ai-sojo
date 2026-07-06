@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { logout } from '@/app/auth/actions';
 
 interface Props {
@@ -12,8 +13,28 @@ interface Props {
 
 export function AppHeader({ email, initials, savedCount }: Props) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const isActive = (target: string) =>
     target === '/app' ? pathname === '/app' : pathname.startsWith(target);
+
+  // Close the profile menu on outside-click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   return (
     <header className="header">
@@ -35,17 +56,37 @@ export function AppHeader({ email, initials, savedCount }: Props) {
       </nav>
 
       <div className="header-actions">
-        <span className="mono" style={{ fontSize: 11.5, color: 'var(--faint)' }} title={email}>
-          {email}
-        </span>
-        <form action={logout}>
-          <button type="submit" className="icon-btn" title="Sign out" aria-label="Sign out">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
+        <div className="profile" ref={menuRef}>
+          <button
+            type="button"
+            className="avatar"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label="Account menu"
+            title={email}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {initials}
           </button>
-        </form>
-        <div className="avatar" aria-hidden>{initials}</div>
+
+          {open && (
+            <div className="profile-menu" role="menu">
+              <div className="profile-menu-head">
+                <div className="profile-menu-label">Signed in as</div>
+                <div className="profile-menu-email" title={email}>{email}</div>
+              </div>
+              <div className="profile-menu-sep" />
+              <form action={logout}>
+                <button type="submit" role="menuitem" className="profile-menu-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  Sign out
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

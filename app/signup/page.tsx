@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { sendMagicLink } from '@/app/auth/actions';
+import { signupWithPassword } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function SignupPage({
@@ -30,9 +30,8 @@ export default async function SignupPage({
         {message && <p style={styles.info}>{message}</p>}
         {error && <p style={styles.error}>{error}</p>}
 
-        <form action={sendMagicLink} style={styles.form}>
+        <form action={signupWithPassword} style={styles.form}>
           <input type="hidden" name="next" value={nextPath} />
-          <input type="hidden" name="intent" value="signup" />
           <label style={styles.label}>
             Email
             <input
@@ -44,8 +43,20 @@ export default async function SignupPage({
               placeholder="you@example.com"
             />
           </label>
+          <label style={styles.label}>
+            Password
+            <input
+              type="password"
+              name="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              style={styles.input}
+              placeholder="At least 6 characters"
+            />
+          </label>
           <button type="submit" style={styles.button}>
-            Email me a sign-in link
+            Create account
           </button>
         </form>
       </div>
