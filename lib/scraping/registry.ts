@@ -143,6 +143,15 @@ export const SOURCES: SourceDef[] = [
       return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
     },
   },
+  {
+    id: 'apppeak', label: 'AppPeak', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'apify', gated: false, enabled: true,
+    run: async () => {
+      const slug = process.env.APPPEAK_ACTOR;
+      if (!slug) throw new Error('APPPEAK_ACTOR not set — deploy the apppeak Apify actor and set its slug');
+      return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+    },
+  },
   // ── Playwright sources — DISABLED until each has an Apify actor (Phase 4) ─
   // runtime:'apify' means "will be called via Apify"; run() throws until then.
   ...([
@@ -154,7 +163,6 @@ export const SOURCES: SourceDef[] = [
     ['investorsclub', 'Investors Club', 'global', 'micro_saas', 'digital'],
     ['indiabiz', 'IndiaBizForSale', 'india', 'deal_listing', 'any'],
     ['businessdeals', 'BusinessDeals.in', 'india', 'deal_listing', 'any'],
-    ['apppeak', 'AppPeak', 'global', 'micro_saas', 'digital'],
     ['startupage', 'StartuPage', 'global', 'micro_saas', 'digital'],
     ['motioninvest', 'Motion Invest', 'global', 'micro_saas', 'digital'],
   ] as const).map(([id, label, region, kind, industries]): SourceDef => ({
