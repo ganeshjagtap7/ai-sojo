@@ -131,6 +131,18 @@ export const SOURCES: SourceDef[] = [
     industries: 'any', runtime: 'inline', gated: true, enabled: false,
     run: async ({ criteria }) => (await import('@/lib/scraping/mergerdomo')).scrapeMergerDomoSale(criteria),
   },
+  // ── Playwright sources now LIVE via a self-owned Apify actor (Phase 4) ────
+  {
+    id: 'exitbid', label: 'ExitBid', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'apify', gated: false, enabled: true,
+    // Actor slug comes from env so the same code runs against any account (free
+    // test account now, admin's paid account in production). Set EXITBID_ACTOR.
+    run: async () => {
+      const slug = process.env.EXITBID_ACTOR;
+      if (!slug) throw new Error('EXITBID_ACTOR not set — deploy the exitbid Apify actor and set its slug');
+      return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+    },
+  },
   // ── Playwright sources — DISABLED until each has an Apify actor (Phase 4) ─
   // runtime:'apify' means "will be called via Apify"; run() throws until then.
   ...([
@@ -141,7 +153,6 @@ export const SOURCES: SourceDef[] = [
     ['trustpilot', 'Trustpilot', 'global', 'niche_directory', 'any'],
     ['investorsclub', 'Investors Club', 'global', 'micro_saas', 'digital'],
     ['indiabiz', 'IndiaBizForSale', 'india', 'deal_listing', 'any'],
-    ['exitbid', 'ExitBid', 'global', 'micro_saas', 'digital'],
     ['businessdeals', 'BusinessDeals.in', 'india', 'deal_listing', 'any'],
     ['apppeak', 'AppPeak', 'global', 'micro_saas', 'digital'],
     ['startupage', 'StartuPage', 'global', 'micro_saas', 'digital'],
