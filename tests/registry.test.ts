@@ -17,7 +17,7 @@ test('core sources are always-run and enabled', () => {
 });
 
 test('playwright sources are disabled until they have an Apify actor', () => {
-  for (const id of ['quietlight', 'synergy', 'tobuz', 'trustpilot',
+  for (const id of ['quietlight', 'tobuz', 'trustpilot',
     'investorsclub',
     'startupage', 'motioninvest'] as const) {
     const s = SOURCES.find((x) => x.id === id);
@@ -28,7 +28,7 @@ test('playwright sources are disabled until they have an Apify actor', () => {
 });
 
 test('apify-live sources are enabled and run via Apify', () => {
-  for (const id of ['exitbid', 'apppeak', 'indiabiz', 'businessdeals', 'websiteclosers'] as const) {
+  for (const id of ['exitbid', 'apppeak', 'indiabiz', 'businessdeals', 'websiteclosers', 'synergy'] as const) {
     const s = SOURCES.find((x) => x.id === id);
     assert.ok(s, `${id} missing`);
     assert.equal(s!.runtime, 'apify');
