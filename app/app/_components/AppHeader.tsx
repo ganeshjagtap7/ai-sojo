@@ -76,6 +76,13 @@ export function AppHeader({ email, initials, savedCount }: Props) {
                 <div className="profile-menu-email" title={email}>{email}</div>
               </div>
               <div className="profile-menu-sep" />
+              <Link href="/app/theses" role="menuitem" className="profile-menu-item" onClick={() => setOpen(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                Theses
+              </Link>
+              <div className="profile-menu-sep" />
               <form action={logout}>
                 <button type="submit" role="menuitem" className="profile-menu-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { thesisSaveStatus } from '@/lib/flow/thesisSave';
 
 // DB-only route — colocate with Supabase (Mumbai) for India-based users (#12).
 export const preferredRegion = 'bom1';
@@ -46,23 +47,30 @@ export async function POST(req: Request) {
 
   const { archetype, facts, buckets, thesis } = parsed.data;
 
+  // Save-eligibility is centralized in thesisSaveStatus (shared with the client).
+  const status = thesisSaveStatus(facts, buckets, thesis);
+
   // No thesis means there was no localStorage state worth persisting. Treat
   // as a no-op so the interstitial can call this idempotently for returning
   // users without forcing a separate code path.
-  if (!thesis || !thesis.paragraph) {
+  if (status === 'no-thesis') {
     return Response.json({ ok: true, persisted: false }, { status: 200 });
   }
 
   // A thesis with NO captured answers is unusable downstream — searches would
   // run with no industry/location (issue #11). Refuse loudly rather than
   // persisting a row that silently breaks the workspace.
-  const factsEmpty = !facts || Object.keys(facts).length === 0;
-  const bucketsEmpty = !buckets || Object.keys(buckets).length === 0;
-  if (factsEmpty && bucketsEmpty) {
+  if (status === 'empty-answers') {
     return Response.json(
       { error: 'Your thesis answers did not come through — please go back and redo the thesis conversation before saving.' },
       { status: 400 },
     );
+  }
+
+  // status === 'saveable' guarantees a thesis with a paragraph; this narrows the
+  // type for TS (the check above already handled the null/no-paragraph cases).
+  if (!thesis?.paragraph) {
+    return Response.json({ ok: true, persisted: false }, { status: 200 });
   }
 
   // Update profile archetype if it came through. RLS lets the user touch
