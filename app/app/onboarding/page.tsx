@@ -33,16 +33,19 @@ export default function OnboardingHandoffPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        const j = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
           throw new Error(j?.error ?? `HTTP ${res.status}`);
         }
-        // Clear localStorage only AFTER the DB write returns success — otherwise
-        // we'd lose the thesis on a server hiccup.
-        try {
-          localStorage.removeItem(LS_KEY);
-        } catch {
-          // Storage disabled — not fatal.
+        // Clear localStorage ONLY when a thesis was actually persisted. A no-op
+        // response (persisted: false — e.g. the user reached here before finishing
+        // the wizard) must NOT wipe their in-progress flow state (issue #11).
+        if (j?.persisted === true) {
+          try {
+            localStorage.removeItem(LS_KEY);
+          } catch {
+            // Storage disabled — not fatal.
+          }
         }
         if (!cancelled) {
           setStatus('done');
