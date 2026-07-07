@@ -412,7 +412,7 @@
   font-family: var(--font-geist), sans-serif;
 }
 .sojo-drawer.open { transform: translateX(0); }
-.sojo-drawer .header { padding: 18px 22px; border-bottom: 1px solid var(--border, #E4E0D4); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #FFFFFF; }
+.sojo-drawer .header { padding: 40px 22px; border-bottom: 1px solid var(--border, #E4E0D4); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #FFFFFF; }
 .sojo-drawer .title h3 { font-family: var(--font-instrument), serif; font-size: 22px; font-weight: 400; margin: 0; letter-spacing: -0.02em; }
 .sojo-drawer .title .sub { font-family: var(--font-geist-mono), monospace; font-size: 11.5px; color: #9B9687; margin-top: 3px; }
 .sojo-drawer .body { padding: 22px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
@@ -420,12 +420,12 @@
 .sojo-drawer h4 { font-family: var(--font-geist-mono), monospace; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: #9B9687; font-weight: 500; margin: 0 0 10px; }
 .sojo-drawer .kv-grid { display: grid; grid-template-columns: 130px 1fr; gap: 0 14px; }
 .sojo-drawer .kv-grid dt { color: #6E6A5E; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #EBE7DB; }
-.sojo-drawer .kv-grid dd { margin: 0; color: #1A1918; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #EBE7DB; font-family: var(--font-geist-mono), monospace; }
+.sojo-drawer .kv-grid dd { margin: 0; color: #1A1918; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #EBE7DB; font-family: var(--font-geist-mono), monospace; min-width: 0; overflow-wrap: anywhere; }
 .sojo-drawer .kv-grid dd.text { font-family: inherit; }
-.sojo-drawer .score-big { background: #FFFFFF; border: 1px solid #E4E0D4; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.sojo-drawer .score-big .n { font-family: var(--font-instrument), serif; font-size: 48px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-.sojo-drawer .score-big .n span { color: #9B9687; font-size: 16px; }
-.sojo-drawer .score-big .why { font-family: var(--font-instrument), serif; font-style: italic; font-size: 15px; color: #2D2B27; line-height: 1.5; padding-top: 10px; border-top: 1px solid #EBE7DB; }
+.sojo-drawer .score-big { background: #FFFFFF; border: 1px solid #E4E0D4; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; }
+.sojo-drawer .score-big .n { font-family: var(--font-instrument), serif; font-size: 34px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.sojo-drawer .score-big .n span { color: #9B9687; font-size: 13px; }
+.sojo-drawer .score-big .why { font-family: var(--font-instrument), serif; font-style: italic; font-size: 13px; color: #2D2B27; line-height: 1.45; padding-top: 8px; border-top: 1px solid #EBE7DB; }
 .sojo-drawer .score-big .match-bar-t { height: 3px; background: #F0EDE4; border-radius: 2px; overflow: hidden; }
 .sojo-drawer .score-big .match-bar-f { height: 100%; border-radius: 2px; }
 .sojo-drawer .score-big .match-bar-f.h { background: #3F6B4A; }

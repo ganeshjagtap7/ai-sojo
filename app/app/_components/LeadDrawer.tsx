@@ -12,6 +12,13 @@ interface Props {
   isSaved?: boolean;
 }
 
+// Actionable contact links (phone → call, email → compose, website → open).
+// Copy-to-clipboard lives on the home cards; here the values are direct links.
+// Same underline style as the "Listing" (yellowpages) link below for consistency.
+const linkStyle: React.CSSProperties = {
+  color: 'inherit', textDecoration: 'underline', overflowWrap: 'anywhere',
+};
+
 // Pretty label per source. Lets the user verify in the drawer which scraper
 // pulled this lead — useful for sanity-checking that all 5 sources are firing.
 const SOURCE_LABEL: Record<string, string> = {
@@ -89,7 +96,7 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
               {lead.matchScore}
               <span> / 100 match</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 14px' }}>
               {(['revenue', 'location', 'industry', 'signal'] as const).map((k) => (
                 <div key={k}>
                   <div
@@ -120,11 +127,25 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
             <h4>Contact</h4>
             <dl className="kv-grid">
               <dt>Phone</dt>
-              <dd>{phone}</dd>
+              <dd>
+                {phone !== '—' ? (
+                  <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} style={linkStyle}>{phone}</a>
+                ) : '—'}
+              </dd>
               <dt>Email</dt>
-              <dd>{email}</dd>
+              <dd>
+                {email !== '—' ? (
+                  <a href={`mailto:${email}`} style={linkStyle}>{email}</a>
+                ) : '—'}
+              </dd>
               <dt>Website</dt>
-              <dd>{website}</dd>
+              <dd>
+                {website !== '—' ? (
+                  <a href={website.startsWith('http') ? website : `https://${website}`} target="_blank" rel="noreferrer" style={linkStyle}>
+                    {website}
+                  </a>
+                ) : '—'}
+              </dd>
             </dl>
           </div>
 
