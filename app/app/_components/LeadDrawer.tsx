@@ -64,6 +64,52 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
   const email = lead.contact?.email ?? '—';
   const website = lead.contact?.website ?? lead.website ?? '—';
 
+  // Business rows are built from the REAL scraped fields — only what this source
+  // actually captured is shown; missing fields are simply omitted (never faked).
+  const money = (n?: number | null) =>
+    typeof n === 'number' && Number.isFinite(n) ? `$${n.toLocaleString('en-US')}` : null;
+  const mult = (n?: number | null) => (typeof n === 'number' && Number.isFinite(n) ? `${n}×` : null);
+  const bd = lead.businessDetails;
+  const industry = industryOf(lead);
+  // Source-specific extras live in rawData (e.g. EBITDA, reason for sale). Read
+  // known keys defensively — shown only when the source actually captured them.
+  const raw = lead.rawData && typeof lead.rawData === 'object' ? (lead.rawData as Record<string, unknown>) : {};
+  const rawStr = (k: string) => {
+    const v = raw[k];
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+    return typeof v === 'string' && v.trim() ? v.trim() : null;
+  };
+  const bizRows: [string, string][] = [];
+  const add = (label: string, val: string | null | undefined) => {
+    if (val) bizRows.push([label, val]);
+  };
+  add('Asking price', money(lead.askingPrice));
+  // Real revenue if the listing states it; otherwise the AI estimate, clearly labeled.
+  add('Revenue', money(lead.annualRevenue) ?? (bd?.estimatedRevenue ? `${bd.estimatedRevenue} · est.` : null));
+  add('Cash flow / SDE', money(lead.annualProfit));
+  add('EBITDA', rawStr('ebitda'));
+  // Profit margin often arrives as a bare number (e.g. 30) — tag it % then.
+  const pm = rawStr('profitMargin');
+  add('Profit margin', pm ? (/^\d+(\.\d+)?$/.test(pm) ? `${pm}%` : pm) : null);
+  add('MRR', money(lead.mrr));
+  add('Revenue multiple', mult(lead.revenueMultiple));
+  add('Profit multiple', mult(lead.profitMultiple));
+  // Ownership / listing context — shown only when the source captured it.
+  add('For sale', lead.forSale === true ? 'Yes' : lead.forSale === false ? 'No' : null);
+  add('Founder', lead.founderName || rawStr('founderName') || rawStr('xFounderName'));
+  add('Founded', lead.foundedDate || rawStr('founded') || rawStr('yearEstablished') || rawStr('yearFounded'));
+  add('Industry', industry || null);
+  add('Years', bd?.yearsInBusiness != null ? String(bd.yearsInBusiness) : null);
+  add('Employees', bd?.employeeCount != null ? String(bd.employeeCount) : null);
+  add(
+    'Rating',
+    bd?.googleRating != null ? `${bd.googleRating}★${bd.reviewCount ? ` · ${bd.reviewCount}` : ''}` : null,
+  );
+  add('BBB', bd?.bbbRating ? `${bd.bbbRating}${bd.bbbAccredited ? ' · accredited' : ''}` : null);
+  // Seller pitch, last row. Truncated so a long blurb doesn't blow up the grid.
+  const descRaw = rawStr('description') || rawStr('sellerMessage') || rawStr('subtitle');
+  add('Description', descRaw ? (descRaw.length > 220 ? `${descRaw.slice(0, 217).trimEnd()}…` : descRaw) : null);
+
   return (
     <>
       <div className={`sojo-drawer-backdrop ${open ? 'open' : ''}`} onClick={onClose} />
@@ -169,26 +215,20 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
 
           <div>
             <h4>Business</h4>
-            <dl className="kv-grid">
-              <dt>Industry</dt>
-              <dd className="text">{industryOf(lead)}</dd>
-              <dt>Revenue</dt>
-              <dd>{lead.businessDetails?.estimatedRevenue ?? '—'}</dd>
-              <dt>Years</dt>
-              <dd>{lead.businessDetails?.yearsInBusiness ?? '—'}</dd>
-              <dt>Employees</dt>
-              <dd>{lead.businessDetails?.employeeCount ?? '—'}</dd>
-              <dt>Rating</dt>
-              <dd>
-                {lead.businessDetails?.googleRating ?? '—'}
-                {lead.businessDetails?.reviewCount ? `★ · ${lead.businessDetails.reviewCount}` : ''}
-              </dd>
-              <dt>BBB</dt>
-              <dd>
-                {lead.businessDetails?.bbbRating ?? '—'}
-                {lead.businessDetails?.bbbAccredited ? ' · accredited' : ''}
-              </dd>
-            </dl>
+            {bizRows.length > 0 ? (
+              <dl className="kv-grid">
+                {bizRows.map(([label, val]) => (
+                  <div key={label} style={{ display: 'contents' }}>
+                    <dt>{label}</dt>
+                    <dd className={label === 'Industry' ? 'text' : undefined}>{val}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+                No further details listed for this business.
+              </p>
+            )}
           </div>
         </div>
 
