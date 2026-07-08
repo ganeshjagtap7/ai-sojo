@@ -61,7 +61,11 @@ export interface RawLead {
 
 // === After enrichment ===
 
-export interface EnrichedLead extends Omit<RawLead, 'rawData'> {
+// Extends RawLead in full (incl. deal fields + rawData) so real scraped data —
+// asking price, revenue, cash flow, EBITDA, broker contact, etc. — survives
+// enrichment instead of being dropped. The enricher only ADDS id/contact/
+// businessDetails on top; it must never discard the source's real fields.
+export interface EnrichedLead extends RawLead {
   id: string;
   contact: {
     ownerName: string | null;

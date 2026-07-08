@@ -59,33 +59,25 @@ ${JSON.stringify(batch.map((l, i) => ({
     for (const enrichment of object.leads) {
       const lead = batch[enrichment.index];
       results.push({
+        // Preserve ALL of the source's real fields — deal fields (askingPrice,
+        // annualRevenue, annualProfit, mrr, multiples, forSale…) and rawData —
+        // then layer id/contact/businessDetails on top. Never drop real data.
+        ...lead,
         id: `lead_${nanoid(8)}`,
-        businessName: lead.businessName,
-        address: lead.address,
-        city: lead.city,
-        state: lead.state,
-        zip: lead.zip,
-        phone: lead.phone,
-        website: lead.website,
-        googleRating: lead.googleRating,
-        reviewCount: lead.reviewCount,
-        categories: lead.categories,
-        yearsInBusiness: lead.yearsInBusiness,
-        employeeCount: lead.employeeCount,
-        bbbRating: lead.bbbRating,
-        bbbAccredited: lead.bbbAccredited,
-        source: lead.source,
-        sourceUrl: lead.sourceUrl,
         contact: {
-          ownerName: enrichment.ownerName,
+          // Only surface REAL contact data. ownerName/email are AI guesses, so
+          // we don't present them as scraped — leave null (the UI shows "—").
+          ownerName: null,
           phone: lead.phone,
-          email: enrichment.emailGuess,
-          linkedin: enrichment.linkedinSearchUrl,
+          email: null,
+          linkedin: enrichment.linkedinSearchUrl, // explicit "search LinkedIn" URL, not a fabricated profile
           website: lead.website,
         },
         businessDetails: {
           yearsInBusiness: lead.yearsInBusiness,
-          employeeCount: enrichment.estimatedEmployees ?? lead.employeeCount,
+          // Real scraped employee count only; estimatedRevenue is the AI band,
+          // kept solely as a clearly-labeled fallback in the UI.
+          employeeCount: lead.employeeCount,
           estimatedRevenue: enrichment.estimatedRevenue,
           googleRating: lead.googleRating,
           reviewCount: lead.reviewCount,
