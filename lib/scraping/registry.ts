@@ -65,7 +65,11 @@ export const SOURCES: SourceDef[] = [
   {
     id: 'web_search', label: 'Web search', region: 'global', kind: 'local_business',
     industries: 'any', runtime: 'inline', gated: false, alwaysRun: true, enabled: true,
-    run: async ({ queries }) => (await import('@/lib/scraping/webSearch')).scrapeWebSearch(queries.webSearch),
+    run: async ({ criteria, queries }) => {
+      const { scrapeWebSearch } = await import('@/lib/scraping/webSearch');
+      const { countryCodeOf } = await import('@/lib/geo');
+      return scrapeWebSearch(queries.webSearch, countryCodeOf(criteria.location.country));
+    },
   },
   {
     id: 'bbb', label: 'BBB', region: 'us', kind: 'local_business',

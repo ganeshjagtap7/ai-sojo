@@ -1,5 +1,6 @@
 import type { SearchCriteria } from '@/lib/types';
 import type { Archetype, Buckets, Facts } from '@/lib/flow/types';
+import { parseLocation } from '@/lib/geo';
 
 const REGION_CAPITALS: Record<string, { city: string; state: string }> = {
   Southeast: { city: 'Atlanta', state: 'GA' },
@@ -41,16 +42,19 @@ function deriveIndustry(buckets: Buckets): string {
   return 'Business services';
 }
 
-function deriveLocation(facts: Facts): { city: string; state: string; country: 'US'; radiusMiles: number } {
-  const region = facts.geo?.[0];
-  // `Facts.geo` is `string[]` — upstream/AI can emit anything. Fall back to Southeast on miss.
-  const match = (region && REGION_CAPITALS[region]) || REGION_CAPITALS.Southeast;
-  return {
-    city: match.city,
-    state: match.state,
-    country: 'US',
-    radiusMiles: 50,
-  };
+function deriveLocation(facts: Facts): SearchCriteria['location'] {
+  // `Facts.geo` is either US-region quick-picks (["Southeast"], possibly several)
+  // or free text ("Mumbai, India"). If the first entry is a known region chip,
+  // keep the legacy behavior — resolve it to a representative metro (multi-region
+  // selections use the first). Empty geo defaults to Southeast/Atlanta. Anything
+  // else is a free-text location that parseLocation resolves to any country.
+  const geo = facts.geo ?? [];
+  const first = geo[0]?.trim();
+  if (geo.length === 0 || (first && REGION_CAPITALS[first])) {
+    const m = (first && REGION_CAPITALS[first]) || REGION_CAPITALS.Southeast;
+    return { city: m.city, state: m.state, country: 'United States', radiusMiles: 50 };
+  }
+  return parseLocation(geo);
 }
 
 export function bucketsToCriteria(input: {
@@ -82,6 +86,11 @@ export function bucketsToCriteria(input: {
       revenueMax: rmax,
       employeeMin: null,
       employeeMax: null,
+      // Left null from the wizard: "equity you can write" is not the same as a
+      // deal's asking price (leverage differs). A price band is set explicitly
+      // via the mandate box ("acquire under $500k") and threaded from there.
+      priceMin: null,
+      priceMax: null,
     },
     preferences: {
       businessAgeYears: null,

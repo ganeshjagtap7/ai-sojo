@@ -17,6 +17,11 @@ export interface SearchCriteria {
     revenueMax: number | null;
     employeeMin: number | null;
     employeeMax: number | null;
+    // Buy-side asking-price band, e.g. "acquire under $500k" => priceMax. Optional
+    // so existing constructors/tests compile; the ranker rewards for-sale listings
+    // whose askingPrice falls inside it.
+    priceMin?: number | null;
+    priceMax?: number | null;
   };
   preferences: {
     businessAgeYears: number | null;
@@ -51,8 +56,9 @@ export interface RawLead {
   askingPrice?: number | null;    // sale price, USD (null when not for sale)
   revenueMultiple?: number | null; // asking price / annual revenue (null when N/A)
   profitMultiple?: number | null;  // asking price / annual profit (null when N/A)
-  annualRevenue?: number | null;  // USD, when stated directly
-  annualProfit?: number | null;   // USD, when stated directly
+  annualRevenue?: number | null;  // when stated directly
+  annualProfit?: number | null;   // when stated directly
+  currency?: string | null;       // ISO 4217 of the money fields as listed on the source (e.g. 'INR', 'USD'); null = infer
   forSale?: boolean | null;       // true = listed for sale, false = MRR-only target
   founderName?: string | null;
   foundedDate?: string | null;    // founding date from profile JSON-LD, e.g. "2026-06-01"

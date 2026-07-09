@@ -17,7 +17,7 @@ function extractPhone(text: string): string | null {
   return match ? match[0] : null;
 }
 
-export async function scrapeWebSearch(queries: string[]): Promise<RawLead[]> {
+export async function scrapeWebSearch(queries: string[], countryCode = 'us'): Promise<RawLead[]> {
   assertPublicSource('web_search');
   const resultsPerPage = cappedMaxResults(10);
 
@@ -26,7 +26,8 @@ export async function scrapeWebSearch(queries: string[]): Promise<RawLead[]> {
     maxPagesPerQuery: 1,
     resultsPerPage,
     languageCode: 'en',
-    countryCode: 'us',
+    // Localize Google to the searcher's country (falls back to US when unknown).
+    countryCode: countryCode || 'us',
   }, {
     waitSecs: 60,
   });

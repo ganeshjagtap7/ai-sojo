@@ -10,13 +10,43 @@ const rankerPrompt = readFileSync(
   'utf-8'
 );
 
-function formatSizePrefs(size: SearchCriteria['businessSize']): string {
+export function formatSizePrefs(size: SearchCriteria['businessSize']): string {
   const parts: string[] = [];
   if (size.employeeMin || size.employeeMax)
     parts.push(`${size.employeeMin ?? 'any'}-${size.employeeMax ?? 'any'} employees`);
   if (size.revenueMin || size.revenueMax)
     parts.push(`$${size.revenueMin ?? 0}-$${size.revenueMax ?? '?'} revenue`);
+  if (size.priceMin || size.priceMax)
+    parts.push(`$${size.priceMin ?? 0}-$${size.priceMax ?? '?'} asking price`);
   return parts.join(', ') || 'no size preference';
+}
+
+// The per-lead facts handed to the ranker. Extracted + exported so the deal
+// fields it now surfaces can be unit-tested without invoking the model. Prefers
+// the REAL scraped revenue over the AI estimate, and passes the deal fields so
+// for-sale listings that fit the buyer's price/size can outrank plain directory
+// businesses.
+export function rankerLeadRows(leads: EnrichedLead[]) {
+  return leads.map((l, i) => ({
+    index: i,
+    name: l.businessName,
+    city: l.city,
+    industry: l.categories?.join(', '),
+    employees: l.businessDetails?.employeeCount,
+    // Real stated revenue when the source has it; otherwise the AI estimate.
+    revenue: l.annualRevenue ?? l.businessDetails?.estimatedRevenue ?? null,
+    forSale: l.forSale ?? false,
+    askingPrice: l.askingPrice ?? null,
+    cashFlow: l.annualProfit ?? null,
+    rating: l.businessDetails?.googleRating,
+    reviews: l.businessDetails?.reviewCount,
+    bbbRating: l.businessDetails?.bbbRating,
+    bbbAccredited: l.businessDetails?.bbbAccredited,
+    yearsInBusiness: l.businessDetails?.yearsInBusiness,
+    hasOwnerName: !!l.contact?.ownerName,
+    hasEmail: !!l.contact?.email,
+    hasPhone: !!l.contact?.phone,
+  }));
 }
 
 export async function rankLeads(
@@ -39,22 +69,7 @@ Size: ${formatSizePrefs(criteria.businessSize)}
 Disqualifiers: ${criteria.preferences.disqualifiers.join(', ') || 'none'}
 
 Businesses:
-${JSON.stringify(leads.map((l, i) => ({
-  index: i,
-  name: l.businessName,
-  city: l.city,
-  industry: l.categories?.join(', '),
-  employees: l.businessDetails?.employeeCount,
-  revenue: l.businessDetails?.estimatedRevenue,
-  rating: l.businessDetails?.googleRating,
-  reviews: l.businessDetails?.reviewCount,
-  bbbRating: l.businessDetails?.bbbRating,
-  bbbAccredited: l.businessDetails?.bbbAccredited,
-  yearsInBusiness: l.businessDetails?.yearsInBusiness,
-  hasOwnerName: !!l.contact?.ownerName,
-  hasEmail: !!l.contact?.email,
-  hasPhone: !!l.contact?.phone,
-})), null, 2)}`,
+${JSON.stringify(rankerLeadRows(leads), null, 2)}`,
     system: rankerPrompt,
   });
 

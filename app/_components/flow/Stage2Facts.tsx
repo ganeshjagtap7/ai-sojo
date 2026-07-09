@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useFlow } from './FlowProvider';
 import type { Facts } from '@/lib/flow/types';
 
@@ -22,7 +23,7 @@ const FACT_FIELDS = [
   {
     id: 'geo',
     label: 'Where you will actually go',
-    sub: 'pick any',
+    sub: 'pick any — or type a city / country',
     kind: 'multi',
     options: ['Southeast', 'Midwest', 'Texas', 'Mountain West', 'Northeast', 'Open'],
   },
@@ -51,6 +52,18 @@ export function Stage2Facts() {
     const cur = (facts[id] as string[] | undefined) || [];
     if (cur.includes(val)) update(id, cur.filter(x => x !== val) as Facts[keyof Facts]);
     else update(id, [...cur, val] as Facts[keyof Facts]);
+  };
+  // Free-text location (any city / country) — added to the geo multi-select as a
+  // removable chip, so international searches aren't limited to the US regions.
+  const [customGeo, setCustomGeo] = useState('');
+  const addGeo = (val: string) => {
+    const t = val.trim();
+    if (!t) return;
+    const cur = (facts.geo as string[] | undefined) || [];
+    if (!cur.some((g) => g.toLowerCase() === t.toLowerCase())) {
+      update('geo', [...cur, t] as Facts[keyof Facts]);
+    }
+    setCustomGeo('');
   };
   const answered = FACT_FIELDS.filter(f => {
     const v = facts[f.id as keyof Facts];
@@ -86,13 +99,33 @@ export function Stage2Facts() {
               )}
               {f.kind === 'multi' && (
                 <div className="pill-row">
-                  {f.options.map(o => (
+                  {/* Preset options plus any free-typed values, so custom
+                      locations show as removable chips alongside the presets. */}
+                  {[...f.options, ...((v as string[] | undefined) || []).filter((o) => !f.options.includes(o))].map(o => (
                     <button key={o}
                       className={`pill ${((v as string[] | undefined)||[]).includes(o) ? 'on' : ''}`}
                       onClick={() => toggleMulti(f.id as keyof Facts, o)}>
                       {o}
                     </button>
                   ))}
+                  {f.id === 'geo' && (
+                    <input
+                      className="pill-input"
+                      type="text"
+                      placeholder="+ city / country, e.g. Mumbai, India"
+                      value={customGeo}
+                      onChange={(e) => setCustomGeo(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); addGeo(customGeo); }
+                      }}
+                      onBlur={() => addGeo(customGeo)}
+                      style={{
+                        border: '1px dashed var(--border)', background: 'transparent',
+                        borderRadius: 999, padding: '6px 14px', fontSize: 13,
+                        color: 'inherit', minWidth: 220, outline: 'none',
+                      }}
+                    />
+                  )}
                 </div>
               )}
             </div>
