@@ -21,13 +21,16 @@ Schema:
 {
   "industry": { "primary": string?, "keywords": string[]? }?,
   "location": { "city": string?, "state": string?, "country": string?, "radiusMiles": number? }?,
-  "businessSize": { "revenueMin": number | null?, "revenueMax": number | null? }?,
-  "summary": string  // human-readable label of the parsed override, e.g. "HVAC, Atlanta, ≤$5M rev"
+  "businessSize": { "revenueMin": number | null?, "revenueMax": number | null?, "priceMin": number | null?, "priceMax": number | null? }?,
+  "summary": string  // human-readable label of the parsed override, e.g. "HVAC, Atlanta, ≤$500k asking"
 }
 
 Rules:
 - Only include fields the user explicitly mentioned or strongly implied. Don't fill in things they didn't say.
-- "under $5M rev" => revenueMax: 5_000_000. "over $2M" => revenueMin: 2_000_000. "$3-10M" => revenueMin: 3_000_000, revenueMax: 10_000_000.
+- Distinguish REVENUE from buy-side PRICE (what the buyer will pay to acquire):
+  - Revenue only when the words revenue / sales / turnover / topline appear: "revenue under $5M" => revenueMax: 5_000_000. "sales over $2M" => revenueMin: 2_000_000. "$3-10M in revenue" => revenueMin: 3_000_000, revenueMax: 10_000_000.
+  - Asking PRICE for budget/acquisition phrasing OR a bare figure attached to the search: "under $500k" / "budget $500k" / "acquire under $500k" / "priced below $1M" / "up to $2M" => priceMax: 500_000 (etc). "over $200k" (as a price floor) => priceMin.
+  - When a bare "under $X" has no revenue/sales word, treat it as priceMax (buyers state a budget far more often than a revenue ceiling).
 - Locations can be anywhere in the world, not just the US.
   - "country": full country name when the user names or clearly implies one (e.g. "in India" => "India", "UK businesses" => "United Kingdom"). Omit if not stated.
   - "city": title case, when a city is given.

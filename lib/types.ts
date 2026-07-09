@@ -17,6 +17,11 @@ export interface SearchCriteria {
     revenueMax: number | null;
     employeeMin: number | null;
     employeeMax: number | null;
+    // Buy-side asking-price band, e.g. "acquire under $500k" => priceMax. Optional
+    // so existing constructors/tests compile; the ranker rewards for-sale listings
+    // whose askingPrice falls inside it.
+    priceMin?: number | null;
+    priceMax?: number | null;
   };
   preferences: {
     businessAgeYears: number | null;

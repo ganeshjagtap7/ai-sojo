@@ -86,6 +86,11 @@ export function bucketsToCriteria(input: {
       revenueMax: rmax,
       employeeMin: null,
       employeeMax: null,
+      // Left null from the wizard: "equity you can write" is not the same as a
+      // deal's asking price (leverage differs). A price band is set explicitly
+      // via the mandate box ("acquire under $500k") and threaded from there.
+      priceMin: null,
+      priceMax: null,
     },
     preferences: {
       businessAgeYears: null,
