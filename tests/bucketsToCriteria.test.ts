@@ -63,14 +63,26 @@ test('TBD check size → null min/max', () => {
   assert.equal(c.businessSize.revenueMax, null);
 });
 
-test('unknown region string falls back to Atlanta without crashing', () => {
+test('free-text location that is not a US region is treated as a US city', () => {
+  // Post-international-search: a non-region single token is a typed city, not
+  // silently swapped to Atlanta. Country stays US when nothing signals otherwise.
   const c = bucketsToCriteria({
     archetype: null,
     facts: { geo: ['Foobar'] },
     buckets: { opening: 'coffee shops' },
   });
-  assert.equal(c.location.city, 'Atlanta');
-  assert.equal(c.location.state, 'GA');
+  assert.equal(c.location.city, 'Foobar');
+  assert.equal(c.location.country, 'United States');
+});
+
+test('free-text international location resolves the country', () => {
+  const c = bucketsToCriteria({
+    archetype: null,
+    facts: { geo: ['Mumbai', 'India'] },
+    buckets: { opening: 'manufacturing' },
+  });
+  assert.equal(c.location.city, 'Mumbai');
+  assert.equal(c.location.country, 'India');
 });
 
 test('multi-geo picks first entry', () => {

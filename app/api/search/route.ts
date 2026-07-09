@@ -1,5 +1,6 @@
 import { runSearchPipeline } from '@/lib/pipeline/searchPipeline';
 import { bucketsToCriteria } from '@/lib/pipeline/bucketsToCriteria';
+import { isUSCountry } from '@/lib/geo';
 import type { SearchCriteria } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, refundRateLimit } from '@/lib/ratelimit';
@@ -48,8 +49,16 @@ export async function POST(req: Request) {
     };
   }
 
-  if (!criteria.location?.city || !criteria.industry?.primary) {
-    return Response.json({ error: 'City and industry are required' }, { status: 400 });
+  // Industry is always required. A city is required for US searches (the US
+  // local-business sources search by city), but a country-level search abroad
+  // (e.g. "manufacturing in India") is valid — its deal/directory sources route
+  // on country, not city.
+  const loc = criteria.location;
+  if (!criteria.industry?.primary || (!loc?.city && isUSCountry(loc?.country))) {
+    return Response.json(
+      { error: isUSCountry(loc?.country) ? 'City and industry are required' : 'Industry is required' },
+      { status: 400 },
+    );
   }
 
   // Stream the pipeline's progress to the client over SSE. The pipeline still

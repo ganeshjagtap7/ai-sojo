@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import type { RankedLead } from '@/lib/types';
 import { subScoresFor, barCls, locLine, industryOf } from '@/app/app/_lib/leadScoring';
+import { detectCurrency, currencyForSource, formatMoney } from '@/lib/money';
 
 interface Props {
   lead: RankedLead | null;
@@ -66,8 +67,6 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
 
   // Business rows are built from the REAL scraped fields — only what this source
   // actually captured is shown; missing fields are simply omitted (never faked).
-  const money = (n?: number | null) =>
-    typeof n === 'number' && Number.isFinite(n) ? `$${n.toLocaleString('en-US')}` : null;
   const mult = (n?: number | null) => (typeof n === 'number' && Number.isFinite(n) ? `${n}×` : null);
   const bd = lead.businessDetails;
   const industry = industryOf(lead);
@@ -79,6 +78,24 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
     if (typeof v === 'number' && Number.isFinite(v)) return String(v);
     return typeof v === 'string' && v.trim() ? v.trim() : null;
   };
+  // Currency = what the listing shows. Prefer an explicit field, then the
+  // currency some scrapers already stash in rawData (currency / listing_currency
+  // / turnoverCurrency), then sniff the source's own price strings (₹/$/£…),
+  // and only then fall back to the source's region. detectCurrency understands
+  // both ISO codes ("INR") and symbols ("₹"), so feeding it all of these works.
+  const currency =
+    lead.currency ||
+    detectCurrency(
+      [
+        raw.currency, raw.listing_currency, raw.turnoverCurrency,
+        raw.askingPrice, raw.price, raw.priceRaw, raw.revenue, raw.cashFlow, raw.ebitda, raw.mrr, raw.multiple,
+      ]
+        .filter((v): v is string => typeof v === 'string')
+        .join(' '),
+    ) ||
+    currencyForSource(lead.source);
+  const money = (n?: number | null) =>
+    typeof n === 'number' && Number.isFinite(n) ? formatMoney(n, currency) : null;
   const bizRows: [string, string][] = [];
   const add = (label: string, val: string | null | undefined) => {
     if (val) bizRows.push([label, val]);
