@@ -29,7 +29,9 @@ export type ScrapingSource =
   | 'web_search'
   | 'bbb'
   | 'yellowpages'
-  | 'manta';
+  | 'manta'
+  | 'bizbuysell'
+  | 'flippa';
 
 /** Static description of one registered, public, logged-out source. */
 export interface PublicSourcePolicy {
@@ -56,6 +58,8 @@ export const PUBLIC_SOURCES: Record<ScrapingSource, PublicSourcePolicy> = {
   bbb: { source: 'bbb', label: 'BBB', loggedOut: true },
   yellowpages: { source: 'yellowpages', label: 'YellowPages', loggedOut: true },
   manta: { source: 'manta', label: 'Manta', loggedOut: true },
+  bizbuysell: { source: 'bizbuysell', label: 'BizBuySell', loggedOut: true },
+  flippa: { source: 'flippa', label: 'Flippa', loggedOut: true },
 };
 
 /**

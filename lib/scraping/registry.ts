@@ -97,6 +97,12 @@ export const SOURCES: SourceDef[] = [
       (await import('@/lib/scraping/businessesforsale')).scrapeBusinessesForSale(criteria),
   },
   {
+    // US SMB marketplace via the shahidirfan/bizbuysell-scraper Apify actor.
+    id: 'bizbuysell', label: 'BizBuySell', region: 'us', kind: 'deal_listing',
+    industries: 'any', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/bizbuysell')).scrapeBizBuySell(criteria),
+  },
+  {
     id: 'businessex', label: 'BusinessEx', region: 'india', kind: 'deal_listing',
     industries: 'any', runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/businessex')).scrapeBusinessEx(criteria),
