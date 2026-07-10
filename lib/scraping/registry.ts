@@ -123,6 +123,12 @@ export const SOURCES: SourceDef[] = [
     run: async ({ criteria }) => (await import('@/lib/scraping/franchisegator')).scrapeFranchiseGator(criteria),
   },
   {
+    // Global online-business marketplace via the parseforge/flippa-scraper actor.
+    id: 'flippa', label: 'Flippa', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/flippa')).scrapeFlippa(criteria),
+  },
+  {
     id: 'sideprojectors', label: 'SideProjectors', region: 'global', kind: 'micro_saas',
     industries: 'digital', runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/sideprojectors')).scrapeSideProjectors(criteria),

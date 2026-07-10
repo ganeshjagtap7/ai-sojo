@@ -28,8 +28,12 @@ test('plumbing in Atlanta: US local + US deal listings, no digital/India sources
 });
 
 test('SaaS with no location: digital sources, no US local directories', () => {
+  // Raise the cap so this verifies WHICH sources qualify (routing rules),
+  // independent of the per-search cap (covered by its own test below).
+  process.env.MAX_EXTRA_SOURCES = '10';
   const ids = selectSources(crit({ country: '', primary: 'SaaS', keywords: ['b2b software'] })).map((s) => s.id);
-  assert.ok(ids.includes('trustmrr') && ids.includes('sideprojectors'), 'micro-SaaS sources');
+  delete process.env.MAX_EXTRA_SOURCES;
+  assert.ok(ids.includes('flippa') && ids.includes('trustmrr') && ids.includes('sideprojectors'), 'micro-SaaS sources');
   assert.ok(!ids.includes('yellowpages') && !ids.includes('manta'), 'local directories are for local businesses');
 });
 

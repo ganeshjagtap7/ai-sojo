@@ -1,0 +1,50 @@
+[
+  {
+    "id": "12223339",
+    "title": "Established SaaS business in Education with $63K ARR revenue, 70% profit margin, and a Domain Authority of 24.",
+    "url": "https://flippa.com/12223339",
+    "price": 170000,
+    "revenueAverage": 7411,
+    "profitAverage": "5,130",
+    "category": "Internet",
+    "propertyType": "SaaS",
+    "multiple": 2.8,
+    "revenueMultiple": 1.9,
+    "currencyLabel": "USD $",
+    "establishedAt": 4,
+    "monetization": "Services & Subscriptions",
+    "country": "India"
+  },
+  {
+    "id": "12282016",
+    "title": "AI-powered child safety SaaS with 50-state predator database integration, 98% margin potential",
+    "url": "https://flippa.com/12282016",
+    "price": 87500,
+    "revenueAverage": 0,
+    "profitAverage": "",
+    "category": "Business",
+    "propertyType": "Saas & Software Projects",
+    "multiple": 0,
+    "revenueMultiple": 0,
+    "currencyLabel": "USD $",
+    "establishedAt": 1,
+    "monetization": "Other",
+    "country": "CA, United States"
+  },
+  {
+    "id": "11954986",
+    "title": "A 2.5+ year-old ecommerce business in the outdoor industry that has built internal Saas",
+    "url": "https://flippa.com/11954986",
+    "price": 1627399,
+    "revenueAverage": 514419,
+    "profitAverage": "102,727",
+    "category": "Sports and Outdoor",
+    "propertyType": "Ecommerce",
+    "multiple": 1.3,
+    "revenueMultiple": 0.3,
+    "currencyLabel": "USD $",
+    "establishedAt": 3,
+    "monetization": "Ecommerce",
+    "country": "DE, United States"
+  }
+]
