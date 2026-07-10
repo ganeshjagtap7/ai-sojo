@@ -18,10 +18,12 @@ interface ThesisRow {
   archetype_id: string | null;
 }
 
+// The sidebar list deliberately excludes the `leads` jsonb — it can be
+// megabytes across a user's search history, and only the ACTIVE search's
+// leads are ever rendered. They're fetched separately below.
 interface SearchRow {
   id: string;
   query: string | null;
-  leads: RankedLead[] | null;
   status: 'running' | 'complete' | 'failed';
   created_at: string;
 }
@@ -58,26 +60,41 @@ export default async function AppHomePage({
   // All search threads for this user+thesis (for sidebar tabs).
   const { data: searches } = await supabase
     .from('searches')
-    .select('id, query, leads, status, created_at')
+    .select('id, query, status, created_at')
     .eq('user_id', user.id)
     .eq('thesis_id', thesis.id)
     .order('created_at', { ascending: false })
     .returns<SearchRow[]>();
 
-  const allSearches = searches ?? [];
+  const allSearches = (searches ?? []).map((s) => ({ ...s, leads: null }));
 
-  // Pick the active tab: ?search=<id> if valid, else most recent, else null.
-  const activeSearch = requestedSearchId
+  // Pick the active tab: ?search=<id> if valid, else most recent, else null —
+  // and fetch leads for that one search only.
+  const activeMeta = requestedSearchId
     ? allSearches.find((s) => s.id === requestedSearchId) ?? null
     : allSearches[0] ?? null;
 
-  // Saved lead IDs (used to render the Save button initial state).
+  let activeSearch: (SearchRow & { leads: RankedLead[] | null }) | null = null;
+  if (activeMeta) {
+    const { data: leadRow } = await supabase
+      .from('searches')
+      .select('leads')
+      .eq('id', activeMeta.id)
+      .eq('user_id', user.id)
+      .maybeSingle<{ leads: RankedLead[] | null }>();
+    activeSearch = { ...activeMeta, leads: leadRow?.leads ?? [] };
+  }
+
+  // Saved lead IDs (used to render the Save button initial state) — only the
+  // id is needed, not the full lead jsonb.
   const { data: savedRows } = await supabase
     .from('saved_leads')
-    .select('lead')
+    .select('leadId:lead->>id')
     .eq('user_id', user.id)
-    .returns<{ lead: RankedLead }[]>();
-  const savedLeadIds = new Set((savedRows ?? []).map((r) => r.lead?.id).filter(Boolean));
+    .returns<{ leadId: string | null }[]>();
+  const savedLeadIds = new Set(
+    (savedRows ?? []).map((r) => r.leadId).filter((id): id is string => Boolean(id)),
+  );
 
   return (
     <Workspace

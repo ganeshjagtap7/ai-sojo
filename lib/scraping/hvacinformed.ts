@@ -20,6 +20,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://www.hvacinformed.com';
 const COUNTRIES = ['canada', 'united-states-of-america']; // North America = Canada + USA (Mexico has no working directory alias — it falls back to a global list)
@@ -173,6 +174,7 @@ function isNorthAmericaContractor(card: Card): boolean {
 }
 
 export async function scrapeHvacInformed(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('hvacinformed');
   const limit = limitFromEnv();
   const client = new HvClient();
 

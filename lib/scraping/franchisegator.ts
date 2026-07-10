@@ -10,6 +10,7 @@
 //   keywords are fetched first, capped at SCRAPER_MAX_ITEMS (default 150).
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://www.franchisegator.com';
 const SITEMAP = `${SITE}/sitemap-profiles.xml`;
@@ -48,6 +49,7 @@ function field(html: string, label: string): string {
 }
 
 export async function scrapeFranchiseGator(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('franchisegator');
   const limit = maxItemsFromEnv(process.env.FG_LIMIT);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 

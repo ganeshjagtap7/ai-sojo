@@ -5,8 +5,10 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
 // Only allow relative redirects (guard against open-redirect via ?next=).
+// Backslashes are rejected too: browsers normalize '\' to '/' in Location
+// headers, so '/\evil.com' would become the protocol-relative '//evil.com'.
 function safeNext(raw: string, fallback: string): string {
-  return raw.startsWith('/') && !raw.startsWith('//') ? raw : fallback;
+  return raw.startsWith('/') && !raw.startsWith('//') && !raw.includes('\\') ? raw : fallback;
 }
 
 // Email + password sign-in. Consistent with the wizard's auth gate; magic links

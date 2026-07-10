@@ -15,6 +15,7 @@
 //   Default scrapes ALL (~16k, long). Set BFSALE_LIMIT=500 to cap.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 import { stateFullName } from '@/lib/utils/usStates';
 
 const BASE = 'https://us.businessesforsale.com/us/search/businesses-for-sale';
@@ -130,6 +131,7 @@ function parseCards(html: string): Card[] {
 }
 
 export async function scrapeBusinessesForSale(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('businessesforsale');
   const limit = limitFromEnv();
   const maxPages = maxPagesFromEnv();
   const searchBase = SITE + buildSearchPath(criteria);

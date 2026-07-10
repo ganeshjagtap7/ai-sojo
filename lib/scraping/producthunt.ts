@@ -12,6 +12,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const ENDPOINT = 'https://api.producthunt.com/v2/api/graphql';
 const PAGE = 50;
@@ -60,6 +61,7 @@ interface Node {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function scrapeProductHunt(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('producthunt');
   const tok = token();
   if (!tok) throw new Error('PH_TOKEN missing — add it to .env.local (see scripts/test-producthunt.ts header).');
   const limit = limitFromEnv();

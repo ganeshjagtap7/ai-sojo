@@ -12,57 +12,54 @@ export default function OnboardingHandoffPage() {
   const [status, setStatus] = useState<Status>('persisting');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Named so the Retry button can re-fire it — a state reset alone never
+  // re-runs the mount effect, which left Retry spinning forever.
+  const persist = async () => {
+    setStatus('persisting');
+    setErrorMsg(null);
+
+    let payload: unknown = {};
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) payload = JSON.parse(raw);
+    } catch {
+      // Corrupt JSON in localStorage — treat as no-op so we don't block the user.
+    }
+
+    try {
+      const res = await fetch('/api/onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(j?.error ?? `HTTP ${res.status}`);
+      }
+      // Clear localStorage ONLY when a thesis was actually persisted. A no-op
+      // response (persisted: false — e.g. the user reached here before finishing
+      // the wizard) must NOT wipe their in-progress flow state (issue #11).
+      if (j?.persisted === true) {
+        try {
+          localStorage.removeItem(LS_KEY);
+        } catch {
+          // Storage disabled — not fatal.
+        }
+      }
+      setStatus('done');
+      router.replace('/app');
+    } catch (err) {
+      setStatus('failed');
+      setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
-
-    let cancelled = false;
-
-    (async () => {
-      let payload: unknown = {};
-      try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (raw) payload = JSON.parse(raw);
-      } catch {
-        // Corrupt JSON in localStorage — treat as no-op so we don't block the user.
-      }
-
-      try {
-        const res = await fetch('/api/onboard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const j = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(j?.error ?? `HTTP ${res.status}`);
-        }
-        // Clear localStorage ONLY when a thesis was actually persisted. A no-op
-        // response (persisted: false — e.g. the user reached here before finishing
-        // the wizard) must NOT wipe their in-progress flow state (issue #11).
-        if (j?.persisted === true) {
-          try {
-            localStorage.removeItem(LS_KEY);
-          } catch {
-            // Storage disabled — not fatal.
-          }
-        }
-        if (!cancelled) {
-          setStatus('done');
-          router.replace('/app');
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setStatus('failed');
-          setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+    void persist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main style={styles.main}>
@@ -78,15 +75,7 @@ export default function OnboardingHandoffPage() {
           <>
             <h1 style={styles.heading}>Something went wrong</h1>
             <p style={styles.error}>{errorMsg ?? 'Please try again.'}</p>
-            <button
-              type="button"
-              style={styles.button}
-              onClick={() => {
-                ranRef.current = false;
-                setStatus('persisting');
-                setErrorMsg(null);
-              }}
-            >
+            <button type="button" style={styles.button} onClick={() => void persist()}>
               Retry
             </button>
           </>

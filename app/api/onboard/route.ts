@@ -82,13 +82,29 @@ export async function POST(req: Request) {
       .eq('id', user.id);
   }
 
+  // Remember the currently active thesis so a failed insert below can restore
+  // it — deactivate-then-insert is two statements, and dying between them
+  // would strand the user with no active thesis (and /app bounces them out).
+  const { data: prevActive } = await supabase
+    .from('theses')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle();
+
   // Soft-deactivate any existing active thesis so the partial unique index
   // (one is_active=true per user) doesn't blow up on insert.
-  await supabase
+  const { error: deactivateError } = await supabase
     .from('theses')
     .update({ is_active: false })
     .eq('user_id', user.id)
     .eq('is_active', true);
+  if (deactivateError) {
+    return Response.json(
+      { error: `Failed to persist thesis: ${deactivateError.message}` },
+      { status: 500 },
+    );
+  }
 
   const { data, error } = await supabase
     .from('theses')
@@ -106,6 +122,13 @@ export async function POST(req: Request) {
     .single();
 
   if (error || !data) {
+    if (prevActive?.id) {
+      await supabase
+        .from('theses')
+        .update({ is_active: true })
+        .eq('id', prevActive.id)
+        .eq('user_id', user.id);
+    }
     return Response.json(
       { error: `Failed to persist thesis: ${error?.message ?? 'unknown'}` },
       { status: 500 },

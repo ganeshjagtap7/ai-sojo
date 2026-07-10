@@ -14,6 +14,7 @@
 //   endpoint has no pagination — so the cap bounds output, not bandwidth.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const DATA_URL = 'https://licensing.esasafe.com/contractor-locator-tool/data';
 const PROFILE = 'https://licensing.esasafe.com/contractor-locator-tool/profile/?id=';
@@ -65,6 +66,7 @@ const normProvince = (p: string | null): string | null => {
 };
 
 export async function scrapeEsaContractors(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('esa');
   const limit = maxItemsFromEnv(process.env.ESA_LIMIT);
   const wantCity = (criteria?.location.city || '').trim().toLowerCase();
   const keep = statusFilter();

@@ -9,6 +9,7 @@
 // page, so we DON'T capture them.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://smedealz.com';
 const LIST_API = `${SITE}/ListingAPI/getListings`;
@@ -88,6 +89,7 @@ async function fetchDetail(id: string): Promise<DetailItem | null> {
 }
 
 export async function scrapeSmeDealz(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('smedealz');
   const listRes = await fetch(LIST_API, {
     headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json', 'User-Agent': UA },
   });

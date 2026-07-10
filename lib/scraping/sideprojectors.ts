@@ -9,6 +9,7 @@
 //   capped at SCRAPER_MAX_ITEMS (default 150) per run.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const BASE = 'https://www.sideprojectors.com';
 const API = `${BASE}/project/data`;
@@ -81,6 +82,7 @@ async function apiGet(offset: number, types: string): Promise<{ projects?: SPPro
 }
 
 export async function scrapeSideProjectors(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('sideprojectors');
   const limit = maxItemsFromEnv(process.env.SP_LIMIT);
   const types = typesFor(criteria);
   const kept: SPProject[] = [];
