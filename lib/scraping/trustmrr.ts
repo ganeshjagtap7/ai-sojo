@@ -10,6 +10,7 @@
 //   slugs matching the mandate's industry keywords are fetched first.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://trustmrr.com';
 const SITEMAP = `${SITE}/sitemap-0.xml`;
@@ -126,6 +127,7 @@ function extractStartup(big: string, slug: string): Startup | null {
 }
 
 export async function scrapeTrustMRR(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('trustmrr');
   const limit = maxItemsFromEnv(process.env.TMRR_LIMIT);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 

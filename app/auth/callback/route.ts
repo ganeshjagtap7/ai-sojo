@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/server';
 // safe default.
 function safeNext(raw: string | null): string {
   if (!raw) return '/app/onboarding';
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/app/onboarding';
+  // Backslashes rejected: browsers treat '\' as '/' when resolving redirects,
+  // so '/\evil.com' would escape to '//evil.com' (protocol-relative).
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return '/app/onboarding';
   return raw;
 }
 

@@ -8,7 +8,10 @@
  * deliberately NOT covered here: they run as standalone dev scripts (never on
  * Vercel) and some authenticate to the site (e.g. `startupage` reuses a saved
  * login session), so they are not public, logged-out sources and must never be
- * added to the allowlist below. It codifies two principles:
+ * added to the allowlist below. The same goes for the registry's gated sources
+ * (`microns`, `mergerdomo`): they require a login/token, are disabled pending
+ * compliance sign-off, and must stay OFF this allowlist. It codifies two
+ * principles:
  *
  *  (a) Logged-out / public-only. We only ever collect data that is publicly
  *      visible WITHOUT authenticating to any site — no logins, no accounts,
@@ -29,7 +32,18 @@ export type ScrapingSource =
   | 'web_search'
   | 'bbb'
   | 'yellowpages'
-  | 'manta';
+  | 'manta'
+  | 'businessesforsale'
+  | 'businessex'
+  | 'buybiz'
+  | 'smedealz'
+  | 'franchisegator'
+  | 'sideprojectors'
+  | 'trustmrr'
+  | 'producthunt'
+  | 'hvacinformed'
+  | 'esa'
+  | 'serviceexperts';
 
 /** Static description of one registered, public, logged-out source. */
 export interface PublicSourcePolicy {
@@ -56,6 +70,17 @@ export const PUBLIC_SOURCES: Record<ScrapingSource, PublicSourcePolicy> = {
   bbb: { source: 'bbb', label: 'BBB', loggedOut: true },
   yellowpages: { source: 'yellowpages', label: 'YellowPages', loggedOut: true },
   manta: { source: 'manta', label: 'Manta', loggedOut: true },
+  businessesforsale: { source: 'businessesforsale', label: 'BusinessesForSale', loggedOut: true },
+  businessex: { source: 'businessex', label: 'BusinessEx', loggedOut: true },
+  buybiz: { source: 'buybiz', label: 'BuyBiz', loggedOut: true },
+  smedealz: { source: 'smedealz', label: 'smeDealz', loggedOut: true },
+  franchisegator: { source: 'franchisegator', label: 'FranchiseGator', loggedOut: true },
+  sideprojectors: { source: 'sideprojectors', label: 'SideProjectors', loggedOut: true },
+  trustmrr: { source: 'trustmrr', label: 'TrustMRR', loggedOut: true },
+  producthunt: { source: 'producthunt', label: 'Product Hunt', loggedOut: true },
+  hvacinformed: { source: 'hvacinformed', label: 'HVACinformed', loggedOut: true },
+  esa: { source: 'esa', label: 'ESA Contractors', loggedOut: true },
+  serviceexperts: { source: 'serviceexperts', label: 'Service Experts', loggedOut: true },
 };
 
 /**

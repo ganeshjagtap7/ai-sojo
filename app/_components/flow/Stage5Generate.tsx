@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFlow } from './FlowProvider';
+import type { Thesis } from '@/lib/flow/types';
 
 const LANE_STEPS = [
   { n: 'i. Thesis synthesis', items: [
@@ -20,7 +21,9 @@ export function Stage5Generate() {
   const [flagAnswer, setFlagAnswer] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const [ready, setReady] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
   const kickedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Tick elapsed for UI clock
   useEffect(() => {
@@ -35,12 +38,14 @@ export function Stage5Generate() {
     else if (progressMode === 'early') { setThesisProgress(1); }
   }, [progressMode]);
 
-  // Kick off thesis on mount (auto mode only). Deal search has moved to Surface 3 (/app).
-  useEffect(() => {
-    if (kickedRef.current || progressMode !== 'auto') return;
-    kickedRef.current = true;
-
-    const thesisTimer = setInterval(() => {
+  // A non-ok response carries { error } JSON (rate limit, model outage) — it
+  // must never be dispatched as the thesis itself, or Stage 6 renders a hollow
+  // deliverable whose "Save" wipes the wizard's localStorage.
+  const runGeneration = () => {
+    setGenError(null);
+    setThesisProgress(0);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
       setThesisProgress((p) => Math.min(p + 1, 4));
     }, 3000);
 
@@ -49,18 +54,32 @@ export function Stage5Generate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ archetype, facts, buckets }),
     })
-      .then((r) => r.json())
-      .then((thesis) => {
-        clearInterval(thesisTimer);
+      .then(async (r) => {
+        const json = await r.json().catch(() => null);
+        if (!r.ok || typeof json?.paragraph !== 'string' || !json.paragraph) {
+          throw new Error(
+            typeof json?.error === 'string' ? json.error : 'Thesis generation failed. Please try again.',
+          );
+        }
+        if (timerRef.current) clearInterval(timerRef.current);
         setThesisProgress(5);
-        dispatch({ type: 'SET_THESIS', thesis });
+        dispatch({ type: 'SET_THESIS', thesis: json as Thesis });
       })
-      .catch(() => {
-        clearInterval(thesisTimer);
-        setThesisProgress(5);
+      .catch((err) => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setThesisProgress(0);
+        setGenError(err instanceof Error ? err.message : 'Thesis generation failed. Please try again.');
       });
+  };
 
-    return () => clearInterval(thesisTimer);
+  // Kick off thesis on mount (auto mode only). Deal search has moved to Surface 3 (/app).
+  useEffect(() => {
+    if (kickedRef.current || progressMode !== 'auto') return;
+    kickedRef.current = true;
+    runGeneration();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -134,6 +153,13 @@ export function Stage5Generate() {
                 value={flagAnswer}
                 onChange={(e) => setFlagAnswer(e.target.value)}
               />
+            </div>
+          )}
+
+          {genError && !ready && (
+            <div className="s5-ready-card">
+              <div className="t">{genError}</div>
+              <button onClick={runGeneration}>Try again →</button>
             </div>
           )}
 

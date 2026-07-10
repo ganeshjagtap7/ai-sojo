@@ -53,6 +53,11 @@ export async function POST(req: Request) {
     .single();
 
   if (error || !data) {
+    // 23505 = unique violation from saved_leads_user_lead_id_uidx (migration
+    // 0004): a concurrent save won the race. Treat as an idempotent success.
+    if (error?.code === '23505') {
+      return Response.json({ ok: true, deduped: true });
+    }
     return Response.json({ error: error?.message ?? 'Save failed' }, { status: 500 });
   }
   return Response.json({ ok: true, id: data.id }, { status: 201 });
