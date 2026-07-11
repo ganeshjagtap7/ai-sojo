@@ -135,6 +135,12 @@ export const SOURCES: SourceDef[] = [
     run: async ({ criteria }) => (await import('@/lib/scraping/acquire')).scrapeAcquire(criteria),
   },
   {
+    // Empire Flippers (global curated online-business marketplace) via memo23/empireflippers-scraper.
+    id: 'empireflippers', label: 'Empire Flippers', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/empireflippers')).scrapeEmpireFlippers(criteria),
+  },
+  {
     id: 'sideprojectors', label: 'SideProjectors', region: 'global', kind: 'micro_saas',
     industries: 'digital', runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/sideprojectors')).scrapeSideProjectors(criteria),

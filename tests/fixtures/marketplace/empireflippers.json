@@ -1,0 +1,52 @@
+[
+  {
+    "listingNumber": 94659,
+    "title": "$106.9K Per Month Affiliate Site in the Technology Niche",
+    "listingUrl": "https://empireflippers.com/listing/94659/",
+    "listingStatus": "For Sale",
+    "askingPrice": 2542357,
+    "unpriced": false,
+    "monthlyGrossRevenue": 106900,
+    "monthlyNetProfit": 105932,
+    "profitMarginPercent": 99,
+    "multiple": 24,
+    "multipleType": "SDE",
+    "niches": ["Technology"],
+    "monetizations": ["Affiliate"],
+    "platforms": ["WordPress"],
+    "country": "US",
+    "reasonForSale": "The Seller would like to explore other opportunities."
+  },
+  {
+    "listingNumber": 95323,
+    "title": "$73.3K Per Month Amazon FBA Business in the Apparel & Accessories Niche",
+    "listingUrl": "https://empireflippers.com/listing/95323/",
+    "listingStatus": "For Sale",
+    "askingPrice": 770673,
+    "unpriced": false,
+    "monthlyGrossRevenue": 73275,
+    "monthlyNetProfit": 20829,
+    "profitMarginPercent": 28,
+    "multiple": 37,
+    "multipleType": "SDE",
+    "niches": ["Apparel & Accessories", "Home"],
+    "monetizations": ["Amazon FBA"],
+    "country": "US"
+  },
+  {
+    "listingNumber": 93100,
+    "title": "$85.5K Per Month eCommerce Business in the Personal Care Niche",
+    "listingUrl": "https://empireflippers.com/listing/93100/",
+    "listingStatus": "For Sale",
+    "askingPrice": 748001,
+    "unpriced": false,
+    "monthlyGrossRevenue": 85464,
+    "monthlyNetProfit": 23375,
+    "profitMarginPercent": 27,
+    "multiple": 32,
+    "multipleType": "SDE",
+    "niches": ["Personal Care"],
+    "monetizations": ["eCommerce", "Amazon FBA"],
+    "country": "US"
+  }
+]

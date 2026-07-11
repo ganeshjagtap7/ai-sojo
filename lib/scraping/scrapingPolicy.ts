@@ -32,7 +32,8 @@ export type ScrapingSource =
   | 'manta'
   | 'bizbuysell'
   | 'flippa'
-  | 'acquire';
+  | 'acquire'
+  | 'empireflippers';
 
 /** Static description of one registered, public, logged-out source. */
 export interface PublicSourcePolicy {
@@ -62,6 +63,7 @@ export const PUBLIC_SOURCES: Record<ScrapingSource, PublicSourcePolicy> = {
   bizbuysell: { source: 'bizbuysell', label: 'BizBuySell', loggedOut: true },
   flippa: { source: 'flippa', label: 'Flippa', loggedOut: true },
   acquire: { source: 'acquire', label: 'Acquire.com', loggedOut: true },
+  empireflippers: { source: 'empireflippers', label: 'Empire Flippers', loggedOut: true },
 };
 
 /**
