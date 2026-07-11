@@ -129,6 +129,12 @@ export const SOURCES: SourceDef[] = [
     run: async ({ criteria }) => (await import('@/lib/scraping/flippa')).scrapeFlippa(criteria),
   },
   {
+    // Acquire.com (global SaaS/startup marketplace) via crawlerbros/acquire-scraper.
+    id: 'acquire', label: 'Acquire.com', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/acquire')).scrapeAcquire(criteria),
+  },
+  {
     id: 'sideprojectors', label: 'SideProjectors', region: 'global', kind: 'micro_saas',
     industries: 'digital', runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/sideprojectors')).scrapeSideProjectors(criteria),
