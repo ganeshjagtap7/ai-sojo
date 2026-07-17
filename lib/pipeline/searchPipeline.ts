@@ -102,9 +102,12 @@ export async function runSearchPipeline(
   const rankedLeads = await rankLeads(enrichedLeads, criteria);
 
   const threshold = parseInt(process.env.MATCH_SCORE_THRESHOLD || '40');
-  const finalLeads = rankedLeads
-    .filter((lead) => lead.matchScore >= threshold)
-    .slice(0, 30);
+  // No hard result cap — return EVERY lead that clears the quality threshold
+  // (Ganesh: surface all available results, not a fixed 30). An optional
+  // RESULTS_LIMIT env can re-impose a cap if ever needed; unlimited by default.
+  const resultsLimit = parseInt(process.env.RESULTS_LIMIT || '0', 10);
+  const qualified = rankedLeads.filter((lead) => lead.matchScore >= threshold);
+  const finalLeads = resultsLimit > 0 ? qualified.slice(0, resultsLimit) : qualified;
 
   const sourcesUsed: string[] = settled
     .map((res, i) => (res.status === 'fulfilled' && res.value.length > 0 ? runs[i].def.id : null))
