@@ -1,0 +1,50 @@
+[
+  {
+    "type": "acquire_listing",
+    "url": "https://app.acquire.com/startup/oa2pfifwmk-b2c-speech-therapy-app-for-kids-5-000-customers-300k-arr-974-growth",
+    "id": "oa2pfifwmk",
+    "listingHeadline": "B2C Speech Therapy App for Kids — 5,000+ Customers, $300K ARR, 974% Growth",
+    "about": "This is a fast-growing speech therapy platform helping parents build children's language skills.",
+    "category": "Mobile",
+    "askingPrice": 100000,
+    "priceCurrency": "USD",
+    "status": "available",
+    "source": "Acquire.com",
+    "revenueAnnual": 351019,
+    "profitAnnual": 80642,
+    "revenueMultiple": 0.28,
+    "profitMultiple": 1.24,
+    "totalRevenueAnnual": 351019,
+    "totalProfitAnnual": 80642,
+    "listingType": "startup_acquisition"
+  },
+  {
+    "type": "acquire_listing",
+    "url": "https://app.acquire.com/startup/b2dtmgraxt-ai-helpdesk-guided-selling-wordpress-plugins-profitable-1k-customers",
+    "id": "b2dtmgraxt",
+    "listingHeadline": "AI Helpdesk & Guided Selling WordPress Plugins — Profitable, 1K+ Customers",
+    "about": "This is a portfolio of WordPress plugins built to boost conversions and cut support workload.",
+    "category": "Ecommerce",
+    "askingPrice": 20000,
+    "priceCurrency": "USD",
+    "status": "available",
+    "source": "Acquire.com",
+    "revenueAnnual": 13000,
+    "profitAnnual": 7000,
+    "revenueMultiple": 1.54,
+    "profitMultiple": 2.86,
+    "listingType": "startup_acquisition"
+  },
+  {
+    "type": "acquire_listing",
+    "url": "https://app.acquire.com/startup/86jkqdo0p5-platform-that-offers-b2b-and-b2c-commerce-and-fundraising-solutions-including-ip-and-patents",
+    "id": "86jkqdo0p5",
+    "listingHeadline": "Platform that offers B2B and B2C commerce and fundraising solutions, including IP and patents",
+    "about": "As a technology and solutions company, our goal is to fundamentally change how needs get exchanged.",
+    "category": "SaaS",
+    "priceCurrency": "USD",
+    "status": "available",
+    "source": "Acquire.com",
+    "listingType": "startup_acquisition"
+  }
+]

@@ -97,6 +97,12 @@ export const SOURCES: SourceDef[] = [
       (await import('@/lib/scraping/businessesforsale')).scrapeBusinessesForSale(criteria),
   },
   {
+    // US SMB marketplace via the shahidirfan/bizbuysell-scraper Apify actor.
+    id: 'bizbuysell', label: 'BizBuySell', region: 'us', kind: 'deal_listing',
+    industries: 'any', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/bizbuysell')).scrapeBizBuySell(criteria),
+  },
+  {
     id: 'businessex', label: 'BusinessEx', region: 'india', kind: 'deal_listing',
     industries: 'any', runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/businessex')).scrapeBusinessEx(criteria),
@@ -115,6 +121,24 @@ export const SOURCES: SourceDef[] = [
     id: 'franchisegator', label: 'FranchiseGator', region: 'us', kind: 'franchise',
     industries: 'any', runtime: 'inline', gated: false, enabled: true,
     run: async ({ criteria }) => (await import('@/lib/scraping/franchisegator')).scrapeFranchiseGator(criteria),
+  },
+  {
+    // Global online-business marketplace via the parseforge/flippa-scraper actor.
+    id: 'flippa', label: 'Flippa', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/flippa')).scrapeFlippa(criteria),
+  },
+  {
+    // Acquire.com (global SaaS/startup marketplace) via crawlerbros/acquire-scraper.
+    id: 'acquire', label: 'Acquire.com', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/acquire')).scrapeAcquire(criteria),
+  },
+  {
+    // Empire Flippers (global curated online-business marketplace) via memo23/empireflippers-scraper.
+    id: 'empireflippers', label: 'Empire Flippers', region: 'global', kind: 'micro_saas',
+    industries: 'digital', runtime: 'inline', gated: false, enabled: true,
+    run: async ({ criteria }) => (await import('@/lib/scraping/empireflippers')).scrapeEmpireFlippers(criteria),
   },
   {
     id: 'sideprojectors', label: 'SideProjectors', region: 'global', kind: 'micro_saas',

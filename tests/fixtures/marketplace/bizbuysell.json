@@ -1,0 +1,51 @@
+[
+  {
+    "source": "bizbuysell",
+    "listing_category": "business",
+    "listing_id": 2402801,
+    "title": "12 Private Salon Suite for Sale with 2 buildings in historical Folsom",
+    "url": "https://www.bizbuysell.com/business-opportunity/12-private-salon-suite-for-sale-with-2-buildings-in-historical-folsom/2402801/",
+    "location": "Folsom, CA",
+    "state_code": "CA",
+    "price": 1900000,
+    "cash_flow": 145000,
+    "gross_revenue": 165000,
+    "ffe_value": 75000,
+    "year_established": 1996,
+    "employees_full_time": 0,
+    "broker_name": "Mike Sellitti",
+    "contact_phone": "(510) 590-1224",
+    "reason_for_selling": "Wanting to retire in the next couple of years",
+    "summary": "Established 30-year salon business featuring 12 private suites across two modern buildings in historic Folsom, CA."
+  },
+  {
+    "source": "bizbuysell",
+    "listing_category": "business",
+    "listing_id": 2235842,
+    "title": "Sale Pending Established Plumbing and Septic Opportunity",
+    "url": "https://www.bizbuysell.com/business-opportunity/sale-pending-established-plumbing-and-septic-opportunity/2235842/",
+    "location": "Redding, CA",
+    "state_code": "CA",
+    "price": 3160000,
+    "gross_revenue": 1200000,
+    "ffe_value": 1100000,
+    "year_established": 1971,
+    "employees_full_time": 0,
+    "broker_name": "Steven Poirier",
+    "contact_phone": "(530) 244-7473"
+  },
+  {
+    "source": "bizbuysell",
+    "listing_category": "business",
+    "listing_id": 2524322,
+    "title": "Mamaroneck NY - Restaurant Asset Sale",
+    "url": "https://www.bizbuysell.com/business-opportunity/mamaroneck-ny-restaurant-asset-sale/2524322/",
+    "location": "Westchester County, NY",
+    "state_code": "NY",
+    "price": 125000,
+    "ffe_value": 125000,
+    "year_established": 2025,
+    "broker_name": "Dana Stetson",
+    "contact_phone": "(914) 281-1960"
+  }
+]

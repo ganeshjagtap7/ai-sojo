@@ -14,18 +14,26 @@ function crit(over: Partial<{ city: string; state: string; country: string; prim
 }
 
 test('plumbing in Atlanta: US local + US deal listings, no digital/India sources', () => {
+  // Raise the cap so this test verifies WHICH sources qualify for the search,
+  // independent of the per-search cap (the cap itself is covered separately).
+  process.env.MAX_EXTRA_SOURCES = '10';
   const ids = selectSources(crit({ city: 'Atlanta', state: 'GA', primary: 'plumbing' })).map((s) => s.id);
+  delete process.env.MAX_EXTRA_SOURCES;
   assert.ok(ids.includes('google_maps') && ids.includes('bbb'), 'core always runs');
   assert.ok(ids.includes('yellowpages'), 'US local directory');
-  assert.ok(ids.includes('businessesforsale'), 'US deal listings');
+  assert.ok(ids.includes('businessesforsale') && ids.includes('bizbuysell'), 'US deal listings');
   assert.ok(ids.includes('serviceexperts'), 'plumbing matches niche directory tags');
   assert.ok(!ids.includes('trustmrr') && !ids.includes('sideprojectors'), 'no micro-SaaS for plumbing');
   assert.ok(!ids.includes('smedealz') && !ids.includes('buybiz'), 'no India sources for US search');
 });
 
 test('SaaS with no location: digital sources, no US local directories', () => {
+  // Raise the cap so this verifies WHICH sources qualify (routing rules),
+  // independent of the per-search cap (covered by its own test below).
+  process.env.MAX_EXTRA_SOURCES = '10';
   const ids = selectSources(crit({ country: '', primary: 'SaaS', keywords: ['b2b software'] })).map((s) => s.id);
-  assert.ok(ids.includes('trustmrr') && ids.includes('sideprojectors'), 'micro-SaaS sources');
+  delete process.env.MAX_EXTRA_SOURCES;
+  assert.ok(ids.includes('flippa') && ids.includes('trustmrr') && ids.includes('sideprojectors'), 'micro-SaaS sources');
   assert.ok(!ids.includes('yellowpages') && !ids.includes('manta'), 'local directories are for local businesses');
 });
 

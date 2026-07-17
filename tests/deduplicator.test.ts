@@ -91,3 +91,40 @@ test('two distinct businesses stay as two separate rows', () => {
   ]);
   assert.equal(out.length, 2);
 });
+
+// ── §6 cross-source dedupe ──────────────────────────────────────────────
+
+test('same listing scraped twice (tracking params/protocol) dedupes via normalized URL', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'Coastal Gem', city: null, sourceUrl: 'https://www.bizbuysell.com/business-opportunity/foo/123/?utm=a' }),
+    lead({ businessName: 'Different headline, same listing', city: null, sourceUrl: 'https://bizbuysell.com/business-opportunity/foo/123?ref=b' }),
+  ]);
+  assert.equal(out.length, 1);
+});
+
+test('same online business on two marketplaces merges into one row, deal fields preserved', () => {
+  const out = deduplicateLeads([
+    lead({
+      businessName: 'CloudInvoice SaaS', city: null, source: 'flippa',
+      sourceUrl: 'https://flippa.com/111', mrr: 5000, forSale: true, currency: 'USD',
+    }),
+    lead({
+      businessName: 'CloudInvoice SaaS', city: null, source: 'acquire',
+      sourceUrl: 'https://app.acquire.com/startup/222', askingPrice: 150000, annualRevenue: 60000, currency: 'USD',
+    }),
+  ]);
+  assert.equal(out.length, 1);
+  const m = out[0];
+  assert.equal(m.mrr, 5000); // kept from the first (Flippa) record
+  assert.equal(m.askingPrice, 150000); // filled from Acquire — would have been dropped before §6
+  assert.equal(m.annualRevenue, 60000);
+  assert.equal(m.forSale, true);
+});
+
+test('two different online businesses (no city) stay separate', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'CloudInvoice SaaS', city: null, sourceUrl: 'https://flippa.com/111' }),
+    lead({ businessName: 'MailPilot App', city: null, sourceUrl: 'https://flippa.com/222' }),
+  ]);
+  assert.equal(out.length, 2);
+});

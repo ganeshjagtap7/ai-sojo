@@ -25,3 +25,20 @@ export function extractDomain(url: string | null): string | null {
     return null;
   }
 }
+
+// Canonical listing key: host + path, minus protocol/www/query/fragment/trailing
+// slash. Two scrapes of the same listing (tracking params, http/https, trailing
+// slash) collapse to one key.
+// "https://www.bizbuysell.com/business-opportunity/foo/123/?utm=x#a"
+//   → "bizbuysell.com/business-opportunity/foo/123"
+export function normalizeUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '').toLowerCase();
+    const path = u.pathname.replace(/\/+$/, '');
+    return `${host}${path}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}

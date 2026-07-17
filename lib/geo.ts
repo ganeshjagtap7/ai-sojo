@@ -70,6 +70,29 @@ function titleCase(s: string): string {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// USPS code → lowercase full state name, for sources that filter by state name
+// (e.g. BizBuySell's actor expects location="texas", not "TX").
+const US_STATE_NAMES: Record<string, string> = {
+  al: 'alabama', ak: 'alaska', az: 'arizona', ar: 'arkansas', ca: 'california', co: 'colorado',
+  ct: 'connecticut', de: 'delaware', fl: 'florida', ga: 'georgia', hi: 'hawaii', id: 'idaho',
+  il: 'illinois', in: 'indiana', ia: 'iowa', ks: 'kansas', ky: 'kentucky', la: 'louisiana',
+  me: 'maine', md: 'maryland', ma: 'massachusetts', mi: 'michigan', mn: 'minnesota',
+  ms: 'mississippi', mo: 'missouri', mt: 'montana', ne: 'nebraska', nv: 'nevada',
+  nh: 'new hampshire', nj: 'new jersey', nm: 'new mexico', ny: 'new york', nc: 'north carolina',
+  nd: 'north dakota', oh: 'ohio', ok: 'oklahoma', or: 'oregon', pa: 'pennsylvania',
+  ri: 'rhode island', sc: 'south carolina', sd: 'south dakota', tn: 'tennessee', tx: 'texas',
+  ut: 'utah', vt: 'vermont', va: 'virginia', wa: 'washington', wv: 'west virginia',
+  wi: 'wisconsin', wy: 'wyoming', dc: 'district of columbia',
+};
+
+/** Lowercase full US state name from a 2-letter code or a full name; null if empty. */
+export function usStateSlug(state: string | null | undefined): string | null {
+  if (!state) return null;
+  const s = state.trim().toLowerCase();
+  if (s.length === 2) return US_STATE_NAMES[s] ?? null;
+  return s; // already a name (or free text) — pass through lowercased
+}
+
 function resolveCountry(segment: string): { display: string; code: string } | null {
   const lc = segment.trim().toLowerCase();
   const hit = COUNTRIES.find((c) => c.aliases.includes(lc));
