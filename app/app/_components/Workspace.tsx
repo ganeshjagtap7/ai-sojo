@@ -474,10 +474,18 @@ function SearchingPanel({ label, sub }: { label: string; sub: string }) {
       </h1>
       <p className="searching-sub">{sub}</p>
       <div className="sketch-count">
-        <div className="n">
-          <span className="plog-spin" style={{ width: 24, height: 24, borderWidth: 2 }} />
-        </div>
-        <div className="l">running</div>
+        {/* Prominent spinning wheel — clear visual confirmation the search is active. */}
+        <span
+          className="plog-spin"
+          style={{
+            width: 44,
+            height: 44,
+            borderWidth: 4,
+            borderColor: 'color-mix(in oklch, var(--accent) 20%, transparent)',
+            borderTopColor: 'var(--accent-deep)',
+          }}
+        />
+        <div className="l" style={{ color: 'var(--muted)' }}>searching…</div>
       </div>
     </div>
   );
