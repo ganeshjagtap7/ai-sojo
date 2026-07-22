@@ -78,17 +78,28 @@ export default function OnboardingHandoffPage() {
           <>
             <h1 style={styles.heading}>Something went wrong</h1>
             <p style={styles.error}>{errorMsg ?? 'Please try again.'}</p>
-            <button
-              type="button"
-              style={styles.button}
-              onClick={() => {
-                ranRef.current = false;
-                setStatus('persisting');
-                setErrorMsg(null);
-              }}
-            >
-              Retry
-            </button>
+            <div style={styles.actions}>
+              <button
+                type="button"
+                style={styles.button}
+                onClick={() => {
+                  ranRef.current = false;
+                  setStatus('persisting');
+                  setErrorMsg(null);
+                }}
+              >
+                Retry
+              </button>
+              {/* Safe exit — don't strand the user re-looping the failing save.
+                  The app handles a missing/empty thesis with its own prompt. */}
+              <button
+                type="button"
+                style={styles.buttonSecondary}
+                onClick={() => router.replace('/app')}
+              >
+                Continue to app
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -102,7 +113,9 @@ const styles: Record<string, React.CSSProperties> = {
   heading: { fontSize: 22, fontWeight: 600, margin: 0 },
   sub: { fontSize: 14, color: '#555', margin: 0 },
   error: { fontSize: 13, padding: 12, borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', margin: 0 },
+  actions: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' },
   button: { padding: '0.625rem 1rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' },
+  buttonSecondary: { padding: '0.625rem 1rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#fff', color: '#111', border: '1px solid #d4d4d8', cursor: 'pointer' },
   spinner: {
     width: 28, height: 28, border: '3px solid #e5e7eb', borderTopColor: '#111',
     borderRadius: '50%', animation: 'spin 0.8s linear infinite',

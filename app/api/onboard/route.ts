@@ -1,30 +1,9 @@
-import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { thesisSaveStatus } from '@/lib/flow/thesisSave';
+import { OnboardSchema } from '@/lib/flow/onboardSchema';
 
 // DB-only route — colocate with Supabase (Mumbai) for India-based users (#12).
 export const preferredRegion = 'bom1';
-
-// Mirrors the FlowState slice we care about persisting. We only accept fields
-// the user actually generated — everything else gets dropped on the floor.
-const OnboardSchema = z.object({
-  archetype: z
-    .object({ id: z.string().optional(), name: z.string().optional() })
-    .nullable()
-    .optional(),
-  facts: z.record(z.string(), z.unknown()).optional(),
-  buckets: z.record(z.string(), z.unknown()).optional(),
-  thesis: z
-    .object({
-      headline: z.string().optional(),
-      paragraph: z.string().optional(),
-      sharpening: z.string().optional(),
-      disqualifiers: z.array(z.string()).optional(),
-      archetypeLabel: z.string().optional(),
-      flag: z.string().nullable().optional(),
-    })
-    .optional(),
-});
 
 export async function POST(req: Request) {
   const supabase = await createClient();
