@@ -236,6 +236,10 @@ export function Stage3Converse() {
     setInput('');
     const convoForAI = nextHistory
       .filter((h): h is AIMessage | UserMessage => h.role === 'ai' || h.role === 'user')
+      // Exclude error turns — same as the "Try again" path. Otherwise a failed
+      // model call's error sentence gets sent as a prior assistant turn and
+      // permanently pollutes the conversation context for every later turn.
+      .filter((h) => !(h.role === 'ai' && (h as AIMessage).isError))
       .map((h) => ({
         role: h.role === 'ai' ? ('assistant' as const) : ('user' as const),
         content: h.text,
