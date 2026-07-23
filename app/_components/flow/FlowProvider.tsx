@@ -14,10 +14,12 @@ interface FlowContextValue {
 const FlowContext = createContext<FlowContextValue | null>(null);
 FlowContext.displayName = 'FlowContext';
 
-// Hook for clearing any non-persistent fields on reload. No transient
-// fields remain today, so this passes the sanitized state through unchanged.
+// Clear non-persistent fields on reload. `progressMode` is a dev-only override
+// (set from the TweaksPanel) — it must never survive a reload: a persisted
+// non-'auto' value makes Stage5 skip real thesis generation and jump straight
+// to "done". Always reset it to 'auto' on load.
 function resetTransient(s: FlowState): FlowState {
-  return s;
+  return { ...s, progressMode: 'auto' };
 }
 
 function sanitize(parsed: unknown): FlowState {

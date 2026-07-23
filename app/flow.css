@@ -1700,12 +1700,17 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
 .tweak-b.on { background: var(--ivory); color: var(--night); border-color: var(--ivory); }
 .editable-input {
   font: inherit;
-  color: inherit;
-  background: transparent;
+  /* Was transparent + inherited color, so the value being edited blended into
+     the paragraph. Give it a clear editing surface so the current text (payload)
+     is plainly visible while typing. Width is sized to content via the `size`
+     attribute on the input (see Stage4Confirm). */
+  color: var(--ink);
+  background: var(--amber-soft);
   border: none;
-  border-bottom: 1px dashed var(--ink-40);
+  border-bottom: 1px solid var(--ink);
   outline: none;
-  padding: 0 2px;
-  min-width: 60px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  min-width: 80px;
 }
-.editable-input:focus { border-bottom-color: var(--ink); }
+.editable-input:focus { border-bottom-color: var(--ink); box-shadow: 0 1px 0 var(--ink); }

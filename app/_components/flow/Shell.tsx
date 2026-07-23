@@ -46,7 +46,13 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           ) : (
             <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              Unidentified visitor
+              {/* Signed-in users aren't "unidentified". Use a real name if the
+                  auth profile has one (e.g. OAuth); otherwise a clean "Signed
+                  in" — never the raw email handle. Once they complete Identify,
+                  the archetype chip above shows the name they entered. */}
+              {user
+                ? ((user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || 'Signed in')
+                : 'Unidentified visitor'}
             </div>
           )}
         </div>
