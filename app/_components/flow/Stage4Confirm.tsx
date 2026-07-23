@@ -138,6 +138,7 @@ function Editable({
     <input
       autoFocus
       className="editable-input"
+      size={Math.max(v.length + 1, 6)}
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={commit}

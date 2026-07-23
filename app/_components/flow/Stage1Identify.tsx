@@ -16,7 +16,12 @@ export function Stage1Identify() {
     { id: 'holdco',      t: "Holdco operator", m: "Long hold. Platform-shaped thinking." },
     { id: 'exploring',   t: "Still exploring — not sure yet", m: "The system will push a little harder." },
   ];
-  const ready = selected && name.trim();
+  // A real name is letters only (plus spaces, hyphens, apostrophes, periods for
+  // names like "O'Brien", "Jean-Luc", "Dr. Rao"). No digits at all — blocks
+  // "67289", "3434hfh", etc.
+  const nameValid = name.trim().length >= 2 && /^[\p{L}][\p{L} .'-]*$/u.test(name.trim());
+  const nameError = name.trim().length > 0 && !nameValid;
+  const ready = selected && nameValid;
   const go = () => {
     if (!ready || !selected) return;
     dispatch({ type: 'SET_ARCHETYPE', archetype: { id: selected, name: name.trim() } });
@@ -46,11 +51,18 @@ export function Stage1Identify() {
           <div>
             <div className="iden-name-label">And your name, for the record</div>
             <input
+              type="text"
               placeholder="Full name"
+              aria-invalid={nameError}
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && go()}
             />
+            {nameError && (
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--danger, #991b1b)', marginTop: 4 }}>
+                Please enter your name
+              </div>
+            )}
           </div>
           <button className="iden-cta" disabled={!ready} onClick={go}>
             Continue
