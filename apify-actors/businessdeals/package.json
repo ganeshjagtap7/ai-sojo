@@ -1,0 +1,9 @@
+{
+  "name": "businessdeals-actor",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "BusinessDeals.in scraper — self-owned Apify actor (Phase 4).",
+  "engines": { "node": ">=18.0.0" },
+  "dependencies": {},
+  "scripts": { "start": "node src/main.js" }
+}

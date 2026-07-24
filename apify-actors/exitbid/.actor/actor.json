@@ -1,0 +1,10 @@
+{
+  "actorSpecification": 1,
+  "name": "exitbid",
+  "title": "ExitBid Scraper",
+  "description": "Scrapes live auctions from exitbid.io into RawLead-shaped items.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile"
+}

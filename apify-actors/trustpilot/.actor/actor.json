@@ -1,0 +1,10 @@
+{
+  "actorSpecification": 1,
+  "name": "trustpilot",
+  "title": "Trustpilot Scraper",
+  "description": "Scrapes trustpilot.com (AWS WAF) local-business leads into RawLead-shaped items.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile"
+}

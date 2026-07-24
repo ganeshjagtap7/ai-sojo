@@ -1,0 +1,15 @@
+{
+  "title": "IndiaBiz Scraper Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "maxItems": {
+      "title": "Max items",
+      "type": "integer",
+      "description": "Maximum number of listings to return (also caps detail-page visits).",
+      "default": 50,
+      "minimum": 1,
+      "editor": "number"
+    }
+  }
+}
