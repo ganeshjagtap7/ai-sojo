@@ -1,0 +1,10 @@
+{
+  "actorSpecification": 1,
+  "name": "businessdeals",
+  "title": "BusinessDeals.in Scraper",
+  "description": "Scrapes India SME listings from businessdeals.in into RawLead-shaped items.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile"
+}

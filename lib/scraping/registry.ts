@@ -45,6 +45,28 @@ const pendingApify = (
   },
 });
 
+/** A self-owned Playwright scraper deployed as an Apify actor. `envVar` holds
+ *  the deployed actor's slug/id (set in Vercel once `apify push`-ed). The source
+ *  is ENABLED only when that env var is present, so this stays a no-op in prod
+ *  until the actor is actually deployed — then it flips on by itself. The actor
+ *  outputs RawLead-shaped rows, so runApifyScraper returns them directly. */
+const deployedApify = (
+  id: RawLead['source'],
+  label: string,
+  region: SourceDef['region'],
+  kind: SourceDef['kind'],
+  industries: SourceDef['industries'],
+  envVar: string,
+): SourceDef => ({
+  id, label, region, kind, industries, runtime: 'apify', gated: false,
+  enabled: !!process.env[envVar],
+  run: async () => {
+    const slug = process.env[envVar];
+    if (!slug) throw new Error(`${envVar} not set — deploy the ${id} Apify actor and set its slug`);
+    return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+  },
+});
+
 /**
  * Every scraper source the product knows about. Routed sources are picked per
  * search by lib/scraping/router.ts; alwaysRun sources run on every search.
@@ -183,17 +205,20 @@ export const SOURCES: SourceDef[] = [
     industries: 'any', runtime: 'inline', gated: true, enabled: false,
     run: async ({ criteria }) => (await import('@/lib/scraping/mergerdomo')).scrapeMergerDomo('sale', criteria),
   },
-  // ── Playwright sources — DISABLED until each has an Apify actor (Phase 4) ─
-  pendingApify('quietlight', 'Quiet Light', 'us', 'deal_listing', 'digital'),
-  pendingApify('websiteclosers', 'Website Closers', 'us', 'deal_listing', 'digital'),
-  pendingApify('synergy', 'Synergy Business Brokers', 'us', 'deal_listing', 'any'),
-  pendingApify('tobuz', 'Tobuz', 'india', 'deal_listing', 'any'),
-  pendingApify('trustpilot', 'Trustpilot', 'global', 'niche_directory', 'any'),
-  pendingApify('investorsclub', 'Investors Club', 'global', 'micro_saas', 'digital'),
-  pendingApify('indiabiz', 'IndiaBizForSale', 'india', 'deal_listing', 'any'),
-  pendingApify('exitbid', 'ExitBid', 'global', 'micro_saas', 'digital'),
-  pendingApify('businessdeals', 'BusinessDeals.in', 'india', 'deal_listing', 'any'),
-  pendingApify('apppeak', 'AppPeak', 'global', 'micro_saas', 'digital'),
+  // ── Self-owned Playwright scrapers, deployed as Apify actors. Each is enabled
+  //    only once its *_ACTOR env var (the deployed actor slug) is set in Vercel;
+  //    until then the router skips it, so prod is unchanged. ────────────────────
+  deployedApify('quietlight', 'Quiet Light', 'us', 'deal_listing', 'digital', 'QUIETLIGHT_ACTOR'),
+  deployedApify('websiteclosers', 'Website Closers', 'us', 'deal_listing', 'digital', 'WEBSITECLOSERS_ACTOR'),
+  deployedApify('synergy', 'Synergy Business Brokers', 'us', 'deal_listing', 'any', 'SYNERGY_ACTOR'),
+  deployedApify('tobuz', 'Tobuz', 'india', 'deal_listing', 'any', 'TOBUZ_ACTOR'),
+  deployedApify('trustpilot', 'Trustpilot', 'global', 'niche_directory', 'any', 'TRUSTPILOT_ACTOR'),
+  deployedApify('investorsclub', 'Investors Club', 'global', 'micro_saas', 'digital', 'INVESTORSCLUB_ACTOR'),
+  deployedApify('indiabiz', 'IndiaBizForSale', 'india', 'deal_listing', 'any', 'INDIABIZ_ACTOR'),
+  deployedApify('exitbid', 'ExitBid', 'global', 'micro_saas', 'digital', 'EXITBID_ACTOR'),
+  deployedApify('businessdeals', 'BusinessDeals.in', 'india', 'deal_listing', 'any', 'BUSINESSDEALS_ACTOR'),
+  deployedApify('apppeak', 'AppPeak', 'global', 'micro_saas', 'digital', 'APPPEAK_ACTOR'),
+  // Compliance-blocked (login-gated) — stay disabled stubs until sign-off.
   pendingApify('startupage', 'StartuPage', 'global', 'micro_saas', 'digital', true),
   pendingApify('motioninvest', 'Motion Invest', 'global', 'micro_saas', 'digital', true),
 ];
