@@ -1,0 +1,10 @@
+{
+  "actorSpecification": 1,
+  "name": "quietlight",
+  "title": "Quiet Light Scraper",
+  "description": "Scrapes listings from quietlight.com (Cloudflare) into RawLead-shaped items.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile"
+}
