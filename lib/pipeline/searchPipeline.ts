@@ -68,7 +68,33 @@ export async function runSearchPipeline(
       .catch(() => onProgress({ phase: 'source', source: def.id, ok: false, index, total }));
   }
 
-  const settled = await Promise.allSettled(runs.map((r) => r.promise));
+  // Scrape-phase time budget. The pipeline used to wait for EVERY scraper to
+  // finish before enriching/ranking, so one slow browser actor could drag the
+  // whole request past Vercel's 300s function ceiling → a hard timeout with
+  // ZERO results. Instead we race each scraper against a shared deadline: when
+  // it fires, any scraper still running is abandoned (its Apify run keeps going
+  // server-side, we just stop waiting) and we proceed with whatever returned.
+  // A search now always returns its best-available set instead of timing out.
+  const scrapeBudgetMs = parseInt(process.env.SCRAPE_BUDGET_MS || '180000', 10);
+  let budgetTimer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<PromiseSettledResult<RawLead[]>>((resolve) => {
+    budgetTimer = setTimeout(
+      () => resolve({ status: 'rejected', reason: new Error('scrape budget exceeded') }),
+      scrapeBudgetMs,
+    );
+  });
+  const settled: PromiseSettledResult<RawLead[]>[] = await Promise.all(
+    runs.map((r) =>
+      Promise.race([
+        r.promise.then(
+          (value): PromiseSettledResult<RawLead[]> => ({ status: 'fulfilled', value }),
+          (reason): PromiseSettledResult<RawLead[]> => ({ status: 'rejected', reason }),
+        ),
+        deadline,
+      ]),
+    ),
+  );
+  clearTimeout(budgetTimer);
 
   settled.forEach((res, i) => {
     if (res.status === 'rejected') {
