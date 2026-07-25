@@ -63,7 +63,11 @@ const deployedApify = (
   run: async () => {
     const slug = process.env[envVar];
     if (!slug) throw new Error(`${envVar} not set — deploy the ${id} Apify actor and set its slug`);
-    return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems: 50 });
+    // These are browser actors that fetch each listing's detail page one-by-one,
+    // so item count drives runtime directly. Keep it modest (default 20) so the
+    // pipeline stays under Vercel's 300s ceiling; tune via CUSTOM_ACTOR_MAX_ITEMS.
+    const maxItems = parseInt(process.env.CUSTOM_ACTOR_MAX_ITEMS || '20', 10);
+    return (await import('@/lib/scraping/apifyRunner')).runApifyScraper(slug, { maxItems });
   },
 });
 
