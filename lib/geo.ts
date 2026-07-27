@@ -113,6 +113,33 @@ export function isUSCountry(country: string | null | undefined): boolean {
 }
 
 /**
+ * Merge a refine-time location override onto a base (thesis) location.
+ *
+ * When the override changes the COUNTRY, the base city/state belong to a
+ * different country and must NOT survive — e.g. a US thesis ("Dallas, TX")
+ * refined to "…in India" must become an India search, not "Dallas, TX, India"
+ * (which makes Google Maps scrape Dallas AND makes the ranker punish real India
+ * leads for not being in Texas, so they get filtered out). Same-country tweaks
+ * still shallow-merge, so a partial override keeps the existing city.
+ */
+export function mergeLocation(
+  base: ParsedLocation,
+  override?: Partial<ParsedLocation>,
+): ParsedLocation {
+  if (!override) return base;
+  const norm = (c?: string) => (c ?? '').trim().toLowerCase();
+  if (override.country && norm(override.country) !== norm(base.country)) {
+    return {
+      city: override.city ?? '',
+      state: override.state ?? '',
+      country: override.country,
+      radiusMiles: override.radiusMiles ?? base.radiusMiles ?? 50,
+    };
+  }
+  return { ...base, ...override };
+}
+
+/**
  * Parse comma-split location parts (e.g. ["Mumbai", "India"]) into a location.
  * `usRegionFallback` supplies a {city,state} for a single US-region quick-pick
  * (Southeast, Texas, …) that the caller recognizes; parseLocation itself is

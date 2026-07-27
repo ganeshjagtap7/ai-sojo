@@ -1,6 +1,6 @@
 import { runSearchPipeline } from '@/lib/pipeline/searchPipeline';
 import { bucketsToCriteria } from '@/lib/pipeline/bucketsToCriteria';
-import { isUSCountry } from '@/lib/geo';
+import { isUSCountry, mergeLocation } from '@/lib/geo';
 import type { SearchCriteria } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, refundRateLimit } from '@/lib/ratelimit';
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const o = body.criteriaOverride as Partial<SearchCriteria>;
     criteria = {
       ...criteria,
-      location: { ...criteria.location, ...(o.location ?? {}) },
+      location: mergeLocation(criteria.location, o.location),
       industry: { ...criteria.industry, ...(o.industry ?? {}) },
       businessSize: { ...criteria.businessSize, ...(o.businessSize ?? {}) },
       preferences: { ...criteria.preferences, ...(o.preferences ?? {}) },
