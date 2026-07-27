@@ -17,7 +17,6 @@ export function Stage5Generate() {
   const { state, dispatch } = useFlow();
   const { buckets, facts, archetype, progressMode } = state;
   const [thesisProgress, setThesisProgress] = useState(0);
-  const [flagAnswer, setFlagAnswer] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const [ready, setReady] = useState(false);
   const kickedRef = useRef(false);
@@ -129,11 +128,6 @@ export function Stage5Generate() {
             <div className="s5-idle">
               <div className="lbl">One flag</div>
               <p className="q">{thesisFlag}</p>
-              <input
-                placeholder="Type an answer — it keeps going in the background"
-                value={flagAnswer}
-                onChange={(e) => setFlagAnswer(e.target.value)}
-              />
             </div>
           )}
 
