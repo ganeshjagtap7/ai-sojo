@@ -3,11 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-
-// Only allow relative redirects (guard against open-redirect via ?next=).
-function safeNext(raw: string, fallback: string): string {
-  return raw.startsWith('/') && !raw.startsWith('//') ? raw : fallback;
-}
+import { safeNext } from '@/lib/safeNext';
 
 // Email + password sign-in. Consistent with the wizard's auth gate; magic links
 // were dropped so there's a single auth method across the app.

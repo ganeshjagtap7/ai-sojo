@@ -6,6 +6,8 @@ export function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'SET_STAGE':
       return { ...state, stage: clampStage(action.stage) };
+    case 'SET_EMAIL':
+      return { ...state, email: action.email };
     case 'SET_ARCHETYPE':
       return { ...state, archetype: action.archetype };
     case 'SET_FACTS':

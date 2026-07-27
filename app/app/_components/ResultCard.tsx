@@ -20,7 +20,7 @@ interface Props {
   searchId: string | null;
   initialSaved: boolean;
   onOpen: (lead: RankedLead) => void;
-  onSaveToggle: (lead: RankedLead, nextSaved: boolean) => Promise<void>;
+  onSaveToggle: (lead: RankedLead, nextSaved: boolean) => Promise<boolean>;
   onDismiss?: (leadId: string) => void;
   toast: (title: string, sub?: string) => void;
   showReason?: boolean;
@@ -51,8 +51,12 @@ export function ResultCard({
 
   const onSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await onSaveToggle(lead, !initialSaved);
-    toast(initialSaved ? 'Removed from saved' : 'Saved', lead.businessName);
+    const ok = await onSaveToggle(lead, !initialSaved);
+    if (ok) {
+      toast(initialSaved ? 'Removed from saved' : 'Saved', lead.businessName);
+    } else {
+      toast(initialSaved ? "Couldn't remove" : "Couldn't save", 'Please try again');
+    }
   };
 
   return (

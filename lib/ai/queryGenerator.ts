@@ -22,7 +22,7 @@ export async function generateSearchQueries(criteria: SearchCriteria) {
     prompt: `Generate search queries for:
 Industry: ${criteria.industry.primary}
 Sub-sectors: ${criteria.industry.subSectors.join(', ') || 'any'}
-City: ${criteria.location.city}, ${criteria.location.state}
+Location: ${[criteria.location.city, criteria.location.state, criteria.location.country].filter(Boolean).join(', ') || 'any'}
 Size preference: ${criteria.businessSize.employeeMin || 'any'}-${criteria.businessSize.employeeMax || 'any'} employees
 Keywords: ${criteria.industry.keywords.join(', ') || 'none'}`,
     system: queryGeneratorPrompt,

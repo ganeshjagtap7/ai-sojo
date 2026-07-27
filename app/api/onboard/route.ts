@@ -61,28 +61,18 @@ export async function POST(req: Request) {
       .eq('id', user.id);
   }
 
-  // Soft-deactivate any existing active thesis so the partial unique index
-  // (one is_active=true per user) doesn't blow up on insert.
-  await supabase
-    .from('theses')
-    .update({ is_active: false })
-    .eq('user_id', user.id)
-    .eq('is_active', true);
-
-  const { data, error } = await supabase
-    .from('theses')
-    .insert({
-      user_id: user.id,
-      headline: thesis.headline ?? null,
-      paragraph: thesis.paragraph,
-      sharpening: thesis.sharpening ?? null,
-      disqualifiers: thesis.disqualifiers ?? [],
-      buckets: buckets ?? {},
-      facts: facts ?? {},
-      is_active: true,
-    })
-    .select('id')
-    .single();
+  // Deactivate-then-insert atomically via an RPC (see migration
+  // 0004_set_active_thesis). Doing it as two separate statements here could
+  // leave the user with NO active thesis if the insert failed after the
+  // deactivate committed. The function runs in a single transaction.
+  const { data, error } = await supabase.rpc('set_active_thesis', {
+    p_headline: thesis.headline ?? null,
+    p_paragraph: thesis.paragraph,
+    p_sharpening: thesis.sharpening ?? null,
+    p_disqualifiers: thesis.disqualifiers ?? [],
+    p_buckets: buckets ?? {},
+    p_facts: facts ?? {},
+  });
 
   if (error || !data) {
     return Response.json(
@@ -91,5 +81,6 @@ export async function POST(req: Request) {
     );
   }
 
-  return Response.json({ ok: true, persisted: true, thesisId: data.id }, { status: 201 });
+  // The RPC returns the new thesis id (uuid) directly.
+  return Response.json({ ok: true, persisted: true, thesisId: data }, { status: 201 });
 }

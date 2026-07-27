@@ -37,9 +37,16 @@ test('RESTART returns to initial', () => {
   const dirty: FlowState = {
     ...INITIAL_STATE,
     stage: 5,
+    email: 'x@y.com',
     archetype: { id: 'self-funded', name: 'x' },
     buckets: { opening: 'a' },
   };
   const s = reducer(dirty, { type: 'RESTART' });
   assert.deepEqual(s, INITIAL_STATE);
+  assert.equal(s.email, null); // landing email cleared on restart
+});
+
+test('SET_EMAIL stores the landing email', () => {
+  const s = reducer(INITIAL_STATE, { type: 'SET_EMAIL', email: 'searcher@fund.com' });
+  assert.equal(s.email, 'searcher@fund.com');
 });

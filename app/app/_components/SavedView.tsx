@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RankedLead } from '@/lib/types';
 import { tierOf, locLine } from '@/app/app/_lib/leadScoring';
@@ -34,6 +34,16 @@ const fmtAgo = (iso: string) => {
   return `${days}d`;
 };
 
+// Relative time depends on Date.now(), which differs between the server render
+// and the client hydration → React hydration mismatch. Compute it only after
+// mount; until then show the deterministic absolute date (same on both sides).
+function TimeAgo({ iso, ago }: { iso: string; ago?: boolean }) {
+  const [rel, setRel] = useState<string | null>(null);
+  useEffect(() => { setRel(fmtAgo(iso)); }, [iso]);
+  if (rel === null) return <>{iso.slice(0, 10)}</>;
+  return <>{ago ? `${rel} ago` : rel}</>;
+}
+
 export function SavedView({ rows }: { rows: SavedRow[] }) {
   return (
     <div className="simple-page">
@@ -45,7 +55,12 @@ export function SavedView({ rows }: { rows: SavedRow[] }) {
           <div className="sub">
             {rows.length === 0
               ? 'Save leads from search results to track outreach here.'
-              : `${rows.length} ${rows.length === 1 ? 'business' : 'businesses'} · last added ${rows[0] ? fmtAgo(rows[0].savedAt) : ''} ago`}
+              : (
+                <>
+                  {rows.length} {rows.length === 1 ? 'business' : 'businesses'} · last added{' '}
+                  {rows[0] ? <TimeAgo iso={rows[0].savedAt} ago /> : ''}
+                </>
+              )}
           </div>
         </div>
       </div>
@@ -129,7 +144,7 @@ function SavedRowEl({ row }: { row: SavedRow }) {
         </select>
         {error && <div style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</div>}
       </td>
-      <td className="num" style={{ color: 'var(--faint)' }}>{fmtAgo(row.savedAt)}</td>
+      <td className="num" style={{ color: 'var(--faint)' }}><TimeAgo iso={row.savedAt} /></td>
       <td>
         <button
           type="button"

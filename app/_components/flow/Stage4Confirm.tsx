@@ -131,7 +131,16 @@ function Editable({
     );
   }
   const commit = () => {
-    onCommit(v.trim() || value);
+    const next = v.trim() || value;
+    // If nothing actually changed (or the field was cleared back to the shown
+    // value), don't write it. `value` is often a placeholder default for a
+    // skipped bucket — committing it on a bare click+blur would harden that
+    // placeholder into real thesis state, breaking "Nothing is sent until build".
+    if (next === value) {
+      setEditing(false);
+      return;
+    }
+    onCommit(next);
     setEditing(false);
   };
   return (

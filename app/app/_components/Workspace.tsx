@@ -216,27 +216,34 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
     await runSearch({ query: q, criteriaOverride: parsed.criteria });
   }
 
-  async function onSaveToggle(lead: RankedLead, nextSaved: boolean) {
-    if (nextSaved) {
-      const res = await fetch('/api/app/saved', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead, searchId: activeSearch?.id ?? null }),
-      });
-      if (res.ok) {
+  // Returns whether the save/unsave actually succeeded, so callers can toast the
+  // truth instead of always claiming success. Network failure (offline) is
+  // caught here rather than bubbling up as an unhandled rejection.
+  async function onSaveToggle(lead: RankedLead, nextSaved: boolean): Promise<boolean> {
+    try {
+      if (nextSaved) {
+        const res = await fetch('/api/app/saved', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead, searchId: activeSearch?.id ?? null }),
+        });
+        if (!res.ok) return false;
         setSavedSet((s) => new Set([...s, lead.id]));
         router.refresh();
-      }
-    } else {
-      const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(lead.id)}`, { method: 'DELETE' });
-      if (res.ok) {
+        return true;
+      } else {
+        const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(lead.id)}`, { method: 'DELETE' });
+        if (!res.ok) return false;
         setSavedSet((s) => {
           const next = new Set(s);
           next.delete(lead.id);
           return next;
         });
         router.refresh();
+        return true;
       }
+    } catch {
+      return false;
     }
   }
 
@@ -454,8 +461,12 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
         onSave={async () => {
           if (!drawerLead) return;
           const next = !savedSet.has(drawerLead.id);
-          await onSaveToggle(drawerLead, next);
-          pushToast(next ? 'Saved' : 'Removed from saved', drawerLead.businessName);
+          const ok = await onSaveToggle(drawerLead, next);
+          if (ok) {
+            pushToast(next ? 'Saved' : 'Removed from saved', drawerLead.businessName);
+          } else {
+            pushToast(next ? "Couldn't save" : "Couldn't remove", 'Please try again');
+          }
         }}
       />
 
