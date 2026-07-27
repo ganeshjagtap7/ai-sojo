@@ -38,6 +38,10 @@ export type Stage = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface FlowState {
   stage: Stage;
+  // Email captured on the Stage 0 landing form (gates "Begin"). Persisted so it
+  // isn't collected-then-discarded and is available downstream (e.g. to pre-fill
+  // signup) instead of being thrown away.
+  email: string | null;
   archetype: Archetype | null;
   facts: Facts;
   buckets: Buckets;
@@ -48,6 +52,7 @@ export interface FlowState {
 
 export const INITIAL_STATE: FlowState = {
   stage: 0,
+  email: null,
   archetype: null,
   facts: {},
   buckets: {},
@@ -58,6 +63,7 @@ export const INITIAL_STATE: FlowState = {
 
 export type FlowAction =
   | { type: 'SET_STAGE'; stage: Stage }
+  | { type: 'SET_EMAIL'; email: string }
   | { type: 'SET_ARCHETYPE'; archetype: Archetype }
   | { type: 'SET_FACTS'; facts: Facts }
   | { type: 'PATCH_BUCKETS'; patch: Buckets }

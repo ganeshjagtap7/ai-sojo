@@ -5,11 +5,15 @@ import { useFlow } from './FlowProvider';
 
 // Stage 0: landing / first contact
 export function Stage0Landing() {
-  const { dispatch } = useFlow();
-  const [name, setName] = useState('');
+  const { state, dispatch } = useFlow();
+  const [email, setEmail] = useState(state.email ?? '');
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!emailValid) return;
+    // Persist the captured email so it isn't collected-then-discarded — it's
+    // kept in flow state for downstream use (e.g. pre-filling signup).
+    dispatch({ type: 'SET_EMAIL', email: email.trim() });
     dispatch({ type: 'SET_STAGE', stage: 1 });
   };
   return (
@@ -29,11 +33,13 @@ export function Stage0Landing() {
           <form className="lp-form" onSubmit={submit}>
             <input
               autoFocus
+              type="email"
+              inputMode="email"
               placeholder="you@fund.com"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
-            <button type="submit">Begin</button>
+            <button type="submit" disabled={!emailValid}>Begin</button>
           </form>
           <div className="lp-meta">
             <div className="lp-meta-cell">
