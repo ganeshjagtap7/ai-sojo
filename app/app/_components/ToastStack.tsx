@@ -26,17 +26,22 @@ export function ToastStack({ toasts, dismiss }: { toasts: ToastItem[]; dismiss: 
   return (
     <div className="toast-stack" aria-live="polite">
       {toasts.map((t) => (
-        <Toast key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+        <Toast key={t.id} toast={t} dismiss={dismiss} />
       ))}
     </div>
   );
 }
 
-function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
+function Toast({ toast, dismiss }: { toast: ToastItem; dismiss: (id: number) => void }) {
+  const { id } = toast;
+  // Depend on the stable id + dismiss (a useCallback), NOT a fresh inline arrow.
+  // An inline `() => dismiss(id)` changed identity every parent re-render, which
+  // re-ran this effect and restarted the 3800ms timer — so a toast could never
+  // auto-dismiss while the parent kept re-rendering (e.g. during a search).
   useEffect(() => {
-    const id = setTimeout(onDismiss, 3800);
-    return () => clearTimeout(id);
-  }, [onDismiss]);
+    const timer = setTimeout(() => dismiss(id), 3800);
+    return () => clearTimeout(timer);
+  }, [id, dismiss]);
 
   return (
     <div className="toast" role="status">
