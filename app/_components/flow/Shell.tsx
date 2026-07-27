@@ -84,8 +84,11 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="shell-foot-nav">
+          {/* Backward nav only. A footer "Next →" used to advance unconditionally,
+              letting users skip past each stage's completion gate (e.g. reach
+              Generate with a null archetype / empty buckets). Forward movement now
+              goes only through each stage's own gated CTA. */}
           <button onClick={() => go(stage - 1)} disabled={stage === 0}>← Prev</button>
-          <button onClick={() => go(stage + 1)} disabled={stage === 6}>Next →</button>
         </div>
       </footer>
     </div>
