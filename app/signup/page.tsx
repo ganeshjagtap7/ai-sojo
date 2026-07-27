@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { signupWithPassword } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/server';
+import { safeNext } from '@/lib/safeNext';
 
 export default async function SignupPage({
   searchParams,
@@ -12,9 +13,10 @@ export default async function SignupPage({
   const { data: { user } } = await supabase.auth.getUser();
   const { error, message, next } = await searchParams;
 
-  if (user) redirect(next ?? '/app/onboarding');
+  const safeDest = safeNext(next ?? '/app/onboarding', '/app/onboarding');
+  if (user) redirect(safeDest);
 
-  const nextPath = next ?? '/app/onboarding';
+  const nextPath = safeDest;
 
   return (
     <main style={styles.main}>
