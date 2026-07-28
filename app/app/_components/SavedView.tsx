@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RankedLead } from '@/lib/types';
 import { tierOf, locLine } from '@/app/app/_lib/leadScoring';
+import { LeadDrawer } from './LeadDrawer';
 
 const STAGES = ['New', 'Outreach', 'Discovery', 'LOI sent', 'Passed'] as const;
 type Stage = (typeof STAGES)[number];
@@ -45,6 +46,26 @@ function TimeAgo({ iso, ago }: { iso: string; ago?: boolean }) {
 }
 
 export function SavedView({ rows }: { rows: SavedRow[] }) {
+  const router = useRouter();
+  const [drawerLead, setDrawerLead] = useState<RankedLead | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const openLead = (lead: RankedLead) => {
+    setDrawerLead(lead);
+    setDrawerOpen(true);
+  };
+
+  // On the Saved page every lead is already saved, so the drawer's save action
+  // removes it. Close the drawer and refresh the list on success.
+  const removeFromDrawer = async () => {
+    if (!drawerLead) return;
+    const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(drawerLead.id)}`, { method: 'DELETE' });
+    if (res.ok) {
+      setDrawerOpen(false);
+      router.refresh();
+    }
+  };
+
   return (
     <div className="simple-page">
       <div className="simple-head">
@@ -80,16 +101,24 @@ export function SavedView({ rows }: { rows: SavedRow[] }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <SavedRowEl key={row.id} row={row} />
+              <SavedRowEl key={row.id} row={row} onOpen={openLead} />
             ))}
           </tbody>
         </table>
       )}
+
+      <LeadDrawer
+        lead={drawerLead}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        isSaved
+        onSave={removeFromDrawer}
+      />
     </div>
   );
 }
 
-function SavedRowEl({ row }: { row: SavedRow }) {
+function SavedRowEl({ row, onOpen }: { row: SavedRow; onOpen: (lead: RankedLead) => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -122,8 +151,14 @@ function SavedRowEl({ row }: { row: SavedRow }) {
 
   return (
     <tr style={pending ? { opacity: 0.5 } : undefined}>
-      <td style={{ fontWeight: 500 }}>{row.lead.businessName}</td>
-      <td style={{ color: 'var(--muted)' }}>{locLine(row.lead) || '—'}</td>
+      <td
+        style={{ fontWeight: 500, cursor: 'pointer' }}
+        onClick={() => onOpen(row.lead)}
+        title="View details"
+      >
+        {row.lead.businessName}
+      </td>
+      <td style={{ color: 'var(--muted)', cursor: 'pointer' }} onClick={() => onOpen(row.lead)}>{locLine(row.lead) || '—'}</td>
       <td className="num">{row.lead.businessDetails?.estimatedRevenue ?? '—'}</td>
       <td className="num">
         <span className={`score-pill ${tier}`}>{row.lead.matchScore}</span>
