@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 type Mode = 'signup' | 'signin';
@@ -11,6 +12,7 @@ type Context = 'start' | 'claim';
 
 export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,10 +39,20 @@ export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
         if (!data.session) {
           setMessage('Check your inbox to confirm your email, then come back and sign in.');
           setMode('signin');
+        } else {
+          // Auto-confirmed signup returns a session immediately — re-run server
+          // routing so the user is placed correctly (see below).
+          router.refresh();
         }
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
+        // Signing in only updates client auth state; it does NOT reload the page,
+        // so the `/` server check that redirects returning users (with an active
+        // thesis) to /app never re-runs — they'd be stuck on the onboarding
+        // wizard until a manual refresh. refresh() re-runs that server check:
+        // returning users get bounced to /app, brand-new users stay in the wizard.
+        router.refresh();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
