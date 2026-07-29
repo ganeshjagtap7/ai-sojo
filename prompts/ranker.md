@@ -15,3 +15,5 @@ Prefer live, affordable deals: when a for-sale listing and a non-listed business
 Also write a 1-2 sentence matchReason for each that explains WHY this business is a good (or decent) lead for this specific buyer. When `forSale` is true and an `askingPrice` is known, say so explicitly — e.g. "Listed for sale at $450,000, within budget" — and note fit or miss against the buyer's price band.
 
 Return the array with matchScore and matchReason added.
+
+When "Buyer's thesis notes" are provided, write each matchReason in the buyer's own language — connect the business to their stated stickiness/archetype where it genuinely applies, and call out explicitly when a lead trips one of their stated disqualifiers (score it down accordingly).

@@ -164,3 +164,31 @@ test('a passed deadline surfaces every lead with the neutral fallback score (no 
   assert.equal(out.length, 1);
   assert.equal(out[0].matchScore, FALLBACK_SCORE);
 });
+
+test('buildRankerPrompt includes thesis notes when provided and omits the section when empty', () => {
+  const el = {
+    businessName: 'Acme Plumbing', city: 'Atlanta', categories: ['Plumbing'],
+    address: null, state: 'GA', zip: null, phone: '404-555-0100', website: 'https://acme.example',
+    googleRating: 4.8, reviewCount: 120, yearsInBusiness: 12, employeeCount: 8,
+    bbbRating: null, bbbAccredited: null, source: 'google_maps' as const, sourceUrl: null,
+    rawData: {},
+    id: 'lead_x', contact: { ownerName: null, phone: '404-555-0100', email: null, linkedin: null, website: 'https://acme.example' },
+    businessDetails: {
+      yearsInBusiness: 12, employeeCount: 8, estimatedRevenue: '$1M-$3M', googleRating: 4.8,
+      reviewCount: 120, bbbRating: null, bbbAccredited: null, operatingHours: null, categories: ['Plumbing'],
+    },
+  };
+  const criteria = {
+    location: { city: 'Atlanta', state: 'GA', country: 'United States', radiusMiles: 25 },
+    industry: { primary: 'Plumbing', subSectors: [], keywords: [] },
+    businessSize: { revenueMin: null, revenueMax: null, employeeMin: null, employeeMax: null },
+    preferences: { businessAgeYears: null, ownerOperated: null, disqualifiers: [] },
+    searcherType: 'unknown' as const,
+  };
+  const withNotes = buildRankerPrompt([el], criteria, 'stickiness: multi-year service contracts\ndisqualifier: customer concentration >40%');
+  assert.match(withNotes, /Buyer's thesis notes/);
+  assert.match(withNotes, /service contracts/);
+
+  const withoutNotes = buildRankerPrompt([el], criteria);
+  assert.doesNotMatch(withoutNotes, /Buyer's thesis notes/);
+});

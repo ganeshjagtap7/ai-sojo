@@ -109,22 +109,29 @@ export function mergeRankings(
 export const RANK_BATCH_SIZE = 25;
 
 /** Exported for tests — the exact per-batch user prompt. */
-export function buildRankerPrompt(batch: EnrichedLead[], criteria: SearchCriteria): string {
+export function buildRankerPrompt(
+  batch: EnrichedLead[],
+  criteria: SearchCriteria,
+  thesisNotes?: string,
+): string {
+  const notesSection = thesisNotes?.trim()
+    ? `\n\nBuyer's thesis notes (their own words — use them to sharpen each matchReason, and score DOWN any lead that clearly hits one of their disqualifiers):\n${thesisNotes.trim()}`
+    : '';
   return `Rank these ${batch.length} businesses for a buyer looking for:
 Industry: ${criteria.industry.primary} (${criteria.industry.subSectors.join(', ') || 'any sub-sector'})
 Location: ${criteria.location.city}, ${criteria.location.state} (${criteria.location.radiusMiles}mi radius)
 Size: ${formatSizePrefs(criteria.businessSize)}
-Disqualifiers: ${criteria.preferences.disqualifiers.join(', ') || 'none'}
+Disqualifiers: ${criteria.preferences.disqualifiers.join(', ') || 'none'}${notesSection}
 
 Businesses:
 ${JSON.stringify(rankerLeadRows(batch), null, 2)}`;
 }
 
-async function rankBatch(batch: EnrichedLead[], criteria: SearchCriteria): Promise<Ranking[]> {
+async function rankBatch(batch: EnrichedLead[], criteria: SearchCriteria, thesisNotes?: string): Promise<Ranking[]> {
   const { object } = await generateObject({
     model: getAIProvider('rank'),
     schema: RankingSchema,
-    prompt: buildRankerPrompt(batch, criteria),
+    prompt: buildRankerPrompt(batch, criteria, thesisNotes),
     system: rankerPrompt,
   });
   return object.leads;
@@ -134,6 +141,7 @@ export async function rankLeads(
   leads: EnrichedLead[],
   criteria: SearchCriteria,
   deadlineMs: number = Number.POSITIVE_INFINITY,
+  thesisNotes?: string,
 ): Promise<RankedLead[]> {
   // Batched + parallel. Each batch fails soft on its own: a model error in one
   // batch surfaces THAT batch un-ranked (neutral score) without touching the
@@ -145,7 +153,7 @@ export async function rankLeads(
     batches.map((b) =>
       Date.now() > deadlineMs
         ? Promise.reject(new Error('pipeline budget exceeded'))
-        : rankBatch(b, criteria),
+        : rankBatch(b, criteria, thesisNotes),
     ),
   );
 

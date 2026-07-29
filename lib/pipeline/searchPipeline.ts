@@ -42,6 +42,7 @@ type OnProgress = (event: ProgressEvent) => void;
 export async function runSearchPipeline(
   criteria: SearchCriteria,
   onProgress: OnProgress = () => {},
+  thesisNotes?: string,
 ): Promise<SearchResult> {
   const startTime = Date.now();
 
@@ -133,7 +134,7 @@ export async function runSearchPipeline(
   const enrichedLeads = await enrichLeads(dedupedLeads, criteria, pipelineDeadline - rankReserveMs);
 
   onProgress({ phase: 'ranking' });
-  const rankedLeads = await rankLeads(enrichedLeads, criteria, pipelineDeadline);
+  const rankedLeads = await rankLeads(enrichedLeads, criteria, pipelineDeadline, thesisNotes);
 
   const threshold = parseInt(process.env.MATCH_SCORE_THRESHOLD || '40');
   // No hard result cap — return EVERY lead that clears the quality threshold
