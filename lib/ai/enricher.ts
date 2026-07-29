@@ -4,20 +4,13 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { nanoid } from 'nanoid';
 import { getAIProvider } from './provider';
+import { chunkArray } from '@/lib/utils/chunk';
 import { RawLead, EnrichedLead, SearchCriteria } from '@/lib/types';
 
 const enricherPrompt = readFileSync(
   join(process.cwd(), 'prompts/enricher.md'),
   'utf-8'
 );
-
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-}
 
 // What the model returns per lead. `index` is model-supplied and untrusted —
 // see mergeBatch for why we never index the batch with it directly.
