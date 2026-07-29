@@ -67,9 +67,12 @@ export default async function AppHomePage({
   const allSearches = searches ?? [];
 
   // Pick the active tab: ?search=<id> if valid, else most recent, else null.
-  const activeSearch = requestedSearchId
-    ? allSearches.find((s) => s.id === requestedSearchId) ?? null
-    : allSearches[0] ?? null;
+  // An unknown ?search= id (deep link to another thesis's search, stale URL)
+  // must not blank the pane — fall back to the most recent search.
+  const activeSearch =
+    (requestedSearchId ? allSearches.find((s) => s.id === requestedSearchId) : undefined) ??
+    allSearches[0] ??
+    null;
 
   // Saved lead IDs (used to render the Save button initial state).
   const { data: savedRows } = await supabase
