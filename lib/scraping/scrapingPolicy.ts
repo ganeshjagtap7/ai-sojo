@@ -33,7 +33,18 @@ export type ScrapingSource =
   | 'bizbuysell'
   | 'flippa'
   | 'acquire'
-  | 'empireflippers';
+  | 'empireflippers'
+  | 'businessesforsale'
+  | 'businessex'
+  | 'buybiz'
+  | 'smedealz'
+  | 'franchisegator'
+  | 'sideprojectors'
+  | 'trustmrr'
+  | 'producthunt'
+  | 'hvacinformed'
+  | 'esa'
+  | 'serviceexperts';
 
 /** Static description of one registered, public, logged-out source. */
 export interface PublicSourcePolicy {
@@ -64,6 +75,17 @@ export const PUBLIC_SOURCES: Record<ScrapingSource, PublicSourcePolicy> = {
   flippa: { source: 'flippa', label: 'Flippa', loggedOut: true },
   acquire: { source: 'acquire', label: 'Acquire.com', loggedOut: true },
   empireflippers: { source: 'empireflippers', label: 'Empire Flippers', loggedOut: true },
+  businessesforsale: { source: 'businessesforsale', label: 'BusinessesForSale', loggedOut: true },
+  businessex: { source: 'businessex', label: 'BusinessEx', loggedOut: true },
+  buybiz: { source: 'buybiz', label: 'BuyBiz', loggedOut: true },
+  smedealz: { source: 'smedealz', label: 'smeDealz', loggedOut: true },
+  franchisegator: { source: 'franchisegator', label: 'FranchiseGator', loggedOut: true },
+  sideprojectors: { source: 'sideprojectors', label: 'SideProjectors', loggedOut: true },
+  trustmrr: { source: 'trustmrr', label: 'TrustMRR', loggedOut: true },
+  producthunt: { source: 'producthunt', label: 'Product Hunt', loggedOut: true },
+  hvacinformed: { source: 'hvacinformed', label: 'HVACinformed', loggedOut: true },
+  esa: { source: 'esa', label: 'ESA Contractors', loggedOut: true },
+  serviceexperts: { source: 'serviceexperts', label: 'Service Experts', loggedOut: true },
 };
 
 /**

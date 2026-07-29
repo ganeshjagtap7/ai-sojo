@@ -9,6 +9,7 @@
 //   Default scrapes ALL US centers (~a few hundred). SE_LIMIT=50 caps.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://www.serviceexperts.com';
 const SITEMAP = `${SITE}/sitemap.xml`;
@@ -65,6 +66,7 @@ function parseLocalBusiness(html: string): LocalBiz | null {
 }
 
 export async function scrapeServiceExperts(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('serviceexperts');
   const limit = limitFromEnv();
 
   // --- 1. State pages from the sitemap ---

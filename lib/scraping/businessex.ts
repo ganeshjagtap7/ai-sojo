@@ -13,6 +13,7 @@
 //   detail fetches happen only for the kept items.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const API = 'https://bxapi.businessex.com/bexapi';
 const SITE = 'https://businessex.com';
@@ -112,6 +113,7 @@ function jwtSellerData(token: string): SellerData | null {
 }
 
 export async function scrapeBusinessEx(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('businessex');
   const limit = maxItemsFromEnv(process.env.BEX_LIMIT);
   const kw = keywordsOf(criteria);
   const wantCity = (criteria?.location.city || '').trim().toLowerCase();

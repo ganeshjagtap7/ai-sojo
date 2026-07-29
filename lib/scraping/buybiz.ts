@@ -8,6 +8,7 @@
 // custom fields. So we just hit that endpoint — no per-listing detail calls.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const API = 'https://admin.buybiz.co.in/api/get-item';
 const SITE = 'https://buybiz.co.in';
@@ -57,6 +58,7 @@ function cfValue(cf: CustomField): string {
 }
 
 export async function scrapeBuyBiz(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('buybiz');
   const items: ApiItem[] = [];
   let page = 1;
   let lastPage = 1;

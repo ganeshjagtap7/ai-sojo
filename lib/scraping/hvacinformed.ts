@@ -18,6 +18,7 @@
 //   blocked, refresh HV_COOKIE from your browser.
 
 import { existsSync, readFileSync } from 'fs';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 import { join } from 'path';
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -173,6 +174,7 @@ function isNorthAmericaContractor(card: Card): boolean {
 }
 
 export async function scrapeHvacInformed(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('hvacinformed');
   const limit = limitFromEnv();
   const client = new HvClient();
 
