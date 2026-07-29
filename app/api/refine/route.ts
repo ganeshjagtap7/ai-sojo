@@ -82,7 +82,7 @@ export async function POST(req: Request) {
 
   try {
     const { text } = await generateText({
-      model: getAIProvider(),
+      model: getAIProvider('refine'),
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     });

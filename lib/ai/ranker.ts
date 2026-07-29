@@ -122,7 +122,7 @@ ${JSON.stringify(rankerLeadRows(batch), null, 2)}`;
 
 async function rankBatch(batch: EnrichedLead[], criteria: SearchCriteria): Promise<Ranking[]> {
   const { object } = await generateObject({
-    model: getAIProvider(),
+    model: getAIProvider('rank'),
     schema: RankingSchema,
     prompt: buildRankerPrompt(batch, criteria),
     system: rankerPrompt,

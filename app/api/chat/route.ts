@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   // client by resetting the text accumulator on each text-start event so we
   // render only the latest segment.
   const result = streamText({
-    model: getAIProvider(),
+    model: getAIProvider('chat'),
     system: systemPrompt,
     messages,
     tools: { update_session: updateSessionTool },

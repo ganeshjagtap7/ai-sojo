@@ -96,7 +96,7 @@ export async function enrichLeads(
     let enrichments: EnrichmentRow[] = [];
     try {
       const { object } = await generateObject({
-        model: getAIProvider(),
+        model: getAIProvider('enrich'),
         schema: EnrichmentSchema,
         prompt: `Enrich these businesses (industry context: ${criteria.industry.primary} in ${criteria.location.city}, ${criteria.location.state}):
 
