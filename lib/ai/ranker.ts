@@ -63,7 +63,7 @@ type Ranking = z.infer<typeof RankingSchema>['leads'][number];
 // Neutral fallback surfaced when the whole ranker call fails — better to show
 // leads un-ranked (fail-soft, like the enricher) than to 500 the whole search
 // or silently drop everything below the pipeline's score threshold.
-const FALLBACK_SCORE = 50;
+export const FALLBACK_SCORE = 50;
 const FALLBACK_REASON = 'Surfaced un-ranked — the ranker was unavailable for this search.';
 
 /**
@@ -132,13 +132,22 @@ async function rankBatch(batch: EnrichedLead[], criteria: SearchCriteria): Promi
 
 export async function rankLeads(
   leads: EnrichedLead[],
-  criteria: SearchCriteria
+  criteria: SearchCriteria,
+  deadlineMs: number = Number.POSITIVE_INFINITY,
 ): Promise<RankedLead[]> {
   // Batched + parallel. Each batch fails soft on its own: a model error in one
   // batch surfaces THAT batch un-ranked (neutral score) without touching the
-  // others, and no batch is big enough to truncate.
+  // others, and no batch is big enough to truncate. Past the deadline, batches
+  // reject immediately so their leads surface un-ranked instead of breaching the
+  // route's maxDuration.
   const batches = chunkArray(leads, RANK_BATCH_SIZE);
-  const settled = await Promise.allSettled(batches.map((b) => rankBatch(b, criteria)));
+  const settled = await Promise.allSettled(
+    batches.map((b) =>
+      Date.now() > deadlineMs
+        ? Promise.reject(new Error('pipeline budget exceeded'))
+        : rankBatch(b, criteria),
+    ),
+  );
 
   const merged: RankedLead[] = [];
   settled.forEach((res, i) => {

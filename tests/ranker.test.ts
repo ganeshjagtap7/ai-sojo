@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { formatSizePrefs, rankerLeadRows, mergeRankings, RANK_BATCH_SIZE, buildRankerPrompt } from '../lib/ai/ranker';
+import { formatSizePrefs, rankerLeadRows, mergeRankings, RANK_BATCH_SIZE, buildRankerPrompt, rankLeads, FALLBACK_SCORE } from '../lib/ai/ranker';
 import type { EnrichedLead, SearchCriteria } from '../lib/types';
 
 const size = (over: Partial<SearchCriteria['businessSize']>): SearchCriteria['businessSize'] => ({
@@ -138,4 +138,29 @@ test('buildRankerPrompt embeds the batch rows and criteria', () => {
   assert.match(prompt, /Rank these 1 businesses/);
   assert.match(prompt, /Acme Plumbing/);
   assert.match(prompt, /Plumbing/);
+});
+
+test('a passed deadline surfaces every lead with the neutral fallback score (no model call)', async () => {
+  const el = {
+    businessName: 'Acme Plumbing', city: 'Atlanta', categories: ['Plumbing'],
+    address: null, state: 'GA', zip: null, phone: '404-555-0100', website: 'https://acme.example',
+    googleRating: 4.8, reviewCount: 120, yearsInBusiness: 12, employeeCount: 8,
+    bbbRating: null, bbbAccredited: null, source: 'google_maps' as const, sourceUrl: null,
+    rawData: {},
+    id: 'lead_x', contact: { ownerName: null, phone: '404-555-0100', email: null, linkedin: null, website: 'https://acme.example' },
+    businessDetails: {
+      yearsInBusiness: 12, employeeCount: 8, estimatedRevenue: '$1M-$3M', googleRating: 4.8,
+      reviewCount: 120, bbbRating: null, bbbAccredited: null, operatingHours: null, categories: ['Plumbing'],
+    },
+  };
+  const criteria = {
+    location: { city: 'Atlanta', state: 'GA', country: 'United States', radiusMiles: 25 },
+    industry: { primary: 'Plumbing', subSectors: [], keywords: [] },
+    businessSize: { revenueMin: null, revenueMax: null, employeeMin: null, employeeMax: null },
+    preferences: { businessAgeYears: null, ownerOperated: null, disqualifiers: [] },
+    searcherType: 'unknown' as const,
+  };
+  const out = await rankLeads([el], criteria, Date.now() - 1);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].matchScore, FALLBACK_SCORE);
 });

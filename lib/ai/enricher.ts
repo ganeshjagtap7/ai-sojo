@@ -74,13 +74,22 @@ export function mergeBatch(batch: RawLead[], enrichments: EnrichmentRow[]): Enri
 
 export async function enrichLeads(
   leads: RawLead[],
-  criteria: SearchCriteria
+  criteria: SearchCriteria,
+  // Absolute epoch-ms deadline. Batches that would start after it are emitted
+  // un-enriched — degraded enrichment always beats a Vercel hard timeout.
+  deadlineMs: number = Number.POSITIVE_INFINITY,
 ): Promise<EnrichedLead[]> {
   const BATCH_SIZE = 15;
   const batches = chunkArray(leads, BATCH_SIZE);
   const results: EnrichedLead[] = [];
 
-  for (const batch of batches) {
+  for (let bi = 0; bi < batches.length; bi++) {
+    if (Date.now() > deadlineMs) {
+      console.warn(`[Enricher] pipeline budget reached — emitting ${batches.length - bi} remaining batches un-enriched`);
+      for (let j = bi; j < batches.length; j++) results.push(...mergeBatch(batches[j], []));
+      break;
+    }
+    const batch = batches[bi];
     // Per-batch isolation: a failed batch (malformed model JSON → schema error,
     // provider 429/timeout) must NOT discard the batches already enriched. On
     // failure we emit the batch's leads un-enriched so no scraped work is lost.

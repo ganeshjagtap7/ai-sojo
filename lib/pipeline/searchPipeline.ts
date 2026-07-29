@@ -45,6 +45,14 @@ export async function runSearchPipeline(
 ): Promise<SearchResult> {
   const startTime = Date.now();
 
+  // Whole-pipeline budget (scrape + enrich + rank), kept under the route's
+  // maxDuration=300s so we always finish streaming a result instead of being
+  // hard-killed by Vercel mid-response. Enrichment stops early enough to leave
+  // the ranker room.
+  const pipelineBudgetMs = parseInt(process.env.PIPELINE_BUDGET_MS || '270000', 10);
+  const rankReserveMs = parseInt(process.env.RANK_RESERVE_MS || '45000', 10);
+  const pipelineDeadline = startTime + pipelineBudgetMs;
+
   const queries = await generateSearchQueries(criteria);
   onProgress({ phase: 'queries' });
 
@@ -122,10 +130,10 @@ export async function runSearchPipeline(
   onProgress({ phase: 'dedup', count: dedupedLeads.length });
 
   onProgress({ phase: 'enriching', count: dedupedLeads.length });
-  const enrichedLeads = await enrichLeads(dedupedLeads, criteria);
+  const enrichedLeads = await enrichLeads(dedupedLeads, criteria, pipelineDeadline - rankReserveMs);
 
   onProgress({ phase: 'ranking' });
-  const rankedLeads = await rankLeads(enrichedLeads, criteria);
+  const rankedLeads = await rankLeads(enrichedLeads, criteria, pipelineDeadline);
 
   const threshold = parseInt(process.env.MATCH_SCORE_THRESHOLD || '40');
   // No hard result cap — return EVERY lead that clears the quality threshold
