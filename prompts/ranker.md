@@ -8,7 +8,7 @@ You are ranking businesses for a potential acquisition. Score each business 0-10
   - A business that is NOT for sale (`forSale: false`, e.g. a directory/Google Maps listing) can never fully fit an acquisition mandate: cap it at 10 — it is a prospect to approach, not a live deal.
   - Unknown size / no preference = 10.
 - **Quality signals (0-15):** High rating + many reviews + years in business = 15
-- **Contact completeness (0-15):** Has owner name + email + phone = 15, partial = 5-10
+- **Reachability (0-15):** Has both a phone number and a website = 15, one of the two = 8, neither = 3
 
 Prefer live, affordable deals: when a for-sale listing and a non-listed business are otherwise comparable, the for-sale listing that fits the buyer's price/size should rank higher.
 

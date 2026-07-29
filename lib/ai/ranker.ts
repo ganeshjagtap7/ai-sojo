@@ -44,9 +44,8 @@ export function rankerLeadRows(leads: EnrichedLead[]) {
     bbbRating: l.businessDetails?.bbbRating,
     bbbAccredited: l.businessDetails?.bbbAccredited,
     yearsInBusiness: l.businessDetails?.yearsInBusiness,
-    hasOwnerName: !!l.contact?.ownerName,
-    hasEmail: !!l.contact?.email,
     hasPhone: !!l.contact?.phone,
+    hasWebsite: !!l.website,
   }));
 }
 

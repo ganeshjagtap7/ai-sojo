@@ -12,16 +12,15 @@ const enricherPrompt = readFileSync(
   'utf-8'
 );
 
-// What the model returns per lead. `index` is model-supplied and untrusted —
-// see mergeBatch for why we never index the batch with it directly.
+// Only the fields that actually survive mergeBatch. The old schema also asked
+// for estimatedEmployees / ownerName / emailGuess, which mergeBatch discarded
+// on purpose (guesses presented as facts) — so we no longer pay the model to
+// produce them.
 const EnrichmentSchema = z.object({
   leads: z.array(
     z.object({
       index: z.number(),
       estimatedRevenue: z.string().nullable(),
-      estimatedEmployees: z.number().nullable(),
-      ownerName: z.string().nullable(),
-      emailGuess: z.string().nullable(),
       linkedinSearchUrl: z.string().nullable(),
     }),
   ),
@@ -102,6 +101,11 @@ ${JSON.stringify(batch.map((l, i) => ({
   reviews: l.reviewCount,
   categories: l.categories,
   employees: l.employeeCount,
+  // Deal fields — when the source already states real money numbers, the
+  // model must NOT estimate over them (see prompts/enricher.md).
+  statedRevenue: l.annualRevenue ?? null,
+  forSale: l.forSale ?? false,
+  askingPrice: l.askingPrice ?? null,
 })), null, 2)}`,
         system: enricherPrompt,
       });

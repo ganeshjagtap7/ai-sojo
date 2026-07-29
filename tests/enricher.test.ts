@@ -12,8 +12,7 @@ function lead(name: string, over: Partial<RawLead> = {}): RawLead {
   };
 }
 const enr = (index: number, over = {}) => ({
-  index, estimatedRevenue: '$1M', estimatedEmployees: 5, ownerName: 'x',
-  emailGuess: 'x@y.com', linkedinSearchUrl: 'https://linkedin.com/search', ...over,
+  index, estimatedRevenue: '$1M', linkedinSearchUrl: 'https://linkedin.com/search', ...over,
 });
 
 test('out-of-range model index does NOT throw and every lead is still returned', () => {
