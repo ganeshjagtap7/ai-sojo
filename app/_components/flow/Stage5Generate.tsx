@@ -94,8 +94,6 @@ export function Stage5Generate() {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const thesisFlag = state.thesis?.flag;
-
   return (
     <div className="s5 fade-in">
       <div className="s5-thesis-band">
@@ -135,13 +133,6 @@ export function Stage5Generate() {
               </div>
             ))}
           </div>
-
-          {thesisFlag && !ready && (
-            <div className="s5-idle">
-              <div className="lbl">One flag</div>
-              <p className="q">{thesisFlag}</p>
-            </div>
-          )}
 
           {failed && (
             <div className="s5-ready-card">
