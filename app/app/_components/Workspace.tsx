@@ -40,6 +40,7 @@ type ScreenState =
   | { kind: 'idle' }
   | { kind: 'running'; label: string; sub: string }
   | { kind: 'empty-thesis' }
+  | { kind: 'thin-thesis' }
   | { kind: 'failed'; error: string };
 
 type FilterTab = 'all' | 'top' | 'saved';
@@ -71,6 +72,11 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
   const thesisIsEmpty =
     Object.keys(thesis.facts ?? {}).length === 0 && Object.keys(thesis.buckets ?? {}).length === 0;
 
+  // A thesis whose conversation buckets never captured an opening/stickiness
+  // answer produces a generic default search ("Business services in Atlanta").
+  // Don't silently burn a quota slot on it — ask first.
+  const thesisIsThin = !thesis.buckets?.opening && !thesis.buckets?.stickiness;
+
   // Auto-kick the initial search if the user has a thesis but no searches.
   // A thesis with no captured answers (issue #11) would search for nothing —
   // show the rebuild prompt instead of burning a doomed search.
@@ -80,6 +86,10 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
     kickedRef.current = true;
     if (thesisIsEmpty) {
       setScreen({ kind: 'empty-thesis' });
+      return;
+    }
+    if (thesisIsThin) {
+      setScreen({ kind: 'thin-thesis' });
       return;
     }
     runSearch({ query: null, criteriaOverride: null });
@@ -352,6 +362,18 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
               </p>
               <button className="btn-primary" type="button" onClick={onRebuildThesis}>
                 Rebuild thesis
+              </button>
+            </div>
+          )}
+          {screen.kind === 'thin-thesis' && (
+            <div className="searching">
+              <h2 className="searching-title">Ready when <em>you</em> are.</h2>
+              <p className="searching-sub">
+                Your thesis is missing some conversation detail, so this first search will be broad.
+                Run it as-is, or type a precise mandate below (e.g. &quot;HVAC business in Atlanta under $5M&quot;).
+              </p>
+              <button className="btn-primary" type="button" onClick={() => runSearch({ query: null, criteriaOverride: null })}>
+                Run the search
               </button>
             </div>
           )}
