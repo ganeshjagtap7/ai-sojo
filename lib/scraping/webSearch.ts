@@ -1,4 +1,5 @@
 import { ApifyClient } from 'apify-client';
+import { assertRunUsable } from '@/lib/scraping/apifyGuard';
 import { RawLead } from '@/lib/types';
 import { assertPublicSource, cappedMaxResults } from '@/lib/scraping/scrapingPolicy';
 
@@ -33,6 +34,7 @@ export async function scrapeWebSearch(queries: string[], countryCode = 'us'): Pr
   });
 
   console.log(`[WebSearch] run id=${run.id} status=${run.status}`);
+  assertRunUsable(run, 'WebSearch');
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
   console.log(`[WebSearch] items returned: ${items.length}`);
 

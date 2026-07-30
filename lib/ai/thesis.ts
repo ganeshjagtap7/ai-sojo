@@ -18,7 +18,7 @@ export async function generateThesis(input: {
 
   try {
     const { text } = await generateText({
-      model: getAIProvider(),
+      model: getAIProvider('thesis'),
       system: thesisPrompt,
       messages: [{ role: 'user', content: userContent }],
     });

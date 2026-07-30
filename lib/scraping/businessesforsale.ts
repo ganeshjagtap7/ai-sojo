@@ -15,6 +15,8 @@
 //   Default scrapes ALL (~16k, long). Set BFSALE_LIMIT=500 to cap.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 import { stateFullName } from '@/lib/utils/usStates';
 
 const BASE = 'https://us.businessesforsale.com/us/search/businesses-for-sale';
@@ -130,6 +132,7 @@ function parseCards(html: string): Card[] {
 }
 
 export async function scrapeBusinessesForSale(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('businessesforsale');
   const limit = limitFromEnv();
   const maxPages = maxPagesFromEnv();
   const searchBase = SITE + buildSearchPath(criteria);
@@ -145,7 +148,7 @@ export async function scrapeBusinessesForSale(criteria?: SearchCriteria): Promis
     const url = page === 1 ? searchBase : `${searchBase}-${page}`;
     let html: string;
     try {
-      const res = await fetch(url, { headers });
+      const res = await fetchWithTimeout(url, { headers });
       if (!res.ok) break;
       html = await res.text();
     } catch {
@@ -169,7 +172,7 @@ export async function scrapeBusinessesForSale(criteria?: SearchCriteria): Promis
   // returning empty-handed.
   if (cards.length === 0 && searchBase !== BASE) {
     try {
-      const res = await fetch(BASE, { headers });
+      const res = await fetchWithTimeout(BASE, { headers });
       if (res.ok) {
         for (const c of parseCards(await res.text())) {
           if (!seen.has(c.url)) { seen.add(c.url); cards.push(c); }

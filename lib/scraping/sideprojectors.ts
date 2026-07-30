@@ -9,6 +9,8 @@
 //   capped at SCRAPER_MAX_ITEMS (default 150) per run.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const BASE = 'https://www.sideprojectors.com';
 const API = `${BASE}/project/data`;
@@ -73,7 +75,7 @@ async function apiGet(offset: number, types: string): Promise<{ projects?: SPPro
     `${API}?savedSearchId=all&query=${TOKEN}&postTypes=sell&projectTypes=${encodeURIComponent(types)}` +
     `&projectPrice=all&revenue=all&projectDate=all&marketId=all&orderBy=created_at&orderType=desc` +
     `&limit=${PAGE_SIZE}&offset=${offset}`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { 'User-Agent': UA, 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -81,6 +83,7 @@ async function apiGet(offset: number, types: string): Promise<{ projects?: SPPro
 }
 
 export async function scrapeSideProjectors(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('sideprojectors');
   const limit = maxItemsFromEnv(process.env.SP_LIMIT);
   const types = typesFor(criteria);
   const kept: SPProject[] = [];

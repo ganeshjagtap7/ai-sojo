@@ -10,6 +10,8 @@
 //   slugs matching the mandate's industry keywords are fetched first.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://trustmrr.com';
 const SITEMAP = `${SITE}/sitemap-0.xml`;
@@ -126,11 +128,12 @@ function extractStartup(big: string, slug: string): Startup | null {
 }
 
 export async function scrapeTrustMRR(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('trustmrr');
   const limit = maxItemsFromEnv(process.env.TMRR_LIMIT);
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 
   // --- 1. Enumerate startup slugs from the public sitemap ---
-  const sm = await fetch(SITEMAP, { headers });
+  const sm = await fetchWithTimeout(SITEMAP, { headers });
   const xml = await sm.text();
   const slugs = Array.from(new Set(Array.from(xml.matchAll(/\/startup\/([a-z0-9-]+)</gi)).map((m) => m[1])));
   // Mandate-relevant slugs first (slug ≈ product name), then the newest rest.
@@ -149,7 +152,7 @@ export async function scrapeTrustMRR(criteria?: SearchCriteria): Promise<RawLead
       const i = idx++;
       const slug = targets[i];
       try {
-        const res = await fetch(`${SITE}/startup/${slug}`, { headers });
+        const res = await fetchWithTimeout(`${SITE}/startup/${slug}`, { headers });
         if (!res.ok) continue;
         const s = extractStartup(decodeRSC(await res.text()), slug);
         if (!s) continue;

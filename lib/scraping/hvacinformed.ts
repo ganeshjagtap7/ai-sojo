@@ -18,6 +18,8 @@
 //   blocked, refresh HV_COOKIE from your browser.
 
 import { existsSync, readFileSync } from 'fs';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 import { join } from 'path';
 import { RawLead, SearchCriteria } from '@/lib/types';
 
@@ -95,7 +97,7 @@ class HvClient {
     for (let t = 0; t < tries; t++) {
       let html = '';
       try {
-        const res = await fetch(url, {
+        const res = await fetchWithTimeout(url, {
           redirect: 'follow',
           headers: {
             'User-Agent': this.ua,
@@ -173,6 +175,7 @@ function isNorthAmericaContractor(card: Card): boolean {
 }
 
 export async function scrapeHvacInformed(_criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('hvacinformed');
   const limit = limitFromEnv();
   const client = new HvClient();
 

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Workspace } from './_components/Workspace';
-import type { RankedLead } from '@/lib/types';
+import type { RankedLead, SearchMetadata } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +24,7 @@ interface SearchRow {
   leads: RankedLead[] | null;
   status: 'running' | 'complete' | 'failed';
   created_at: string;
+  search_metadata: SearchMetadata | null;
 }
 
 export default async function AppHomePage({
@@ -58,7 +59,7 @@ export default async function AppHomePage({
   // All search threads for this user+thesis (for sidebar tabs).
   const { data: searches } = await supabase
     .from('searches')
-    .select('id, query, leads, status, created_at')
+    .select('id, query, leads, status, created_at, search_metadata')
     .eq('user_id', user.id)
     .eq('thesis_id', thesis.id)
     .order('created_at', { ascending: false })
@@ -67,9 +68,12 @@ export default async function AppHomePage({
   const allSearches = searches ?? [];
 
   // Pick the active tab: ?search=<id> if valid, else most recent, else null.
-  const activeSearch = requestedSearchId
-    ? allSearches.find((s) => s.id === requestedSearchId) ?? null
-    : allSearches[0] ?? null;
+  // An unknown ?search= id (deep link to another thesis's search, stale URL)
+  // must not blank the pane — fall back to the most recent search.
+  const activeSearch =
+    (requestedSearchId ? allSearches.find((s) => s.id === requestedSearchId) : undefined) ??
+    allSearches[0] ??
+    null;
 
   // Saved lead IDs (used to render the Save button initial state).
   const { data: savedRows } = await supabase

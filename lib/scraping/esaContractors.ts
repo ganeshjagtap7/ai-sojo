@@ -14,6 +14,8 @@
 //   endpoint has no pagination — so the cap bounds output, not bandwidth.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const DATA_URL = 'https://licensing.esasafe.com/contractor-locator-tool/data';
 const PROFILE = 'https://licensing.esasafe.com/contractor-locator-tool/profile/?id=';
@@ -65,12 +67,13 @@ const normProvince = (p: string | null): string | null => {
 };
 
 export async function scrapeEsaContractors(criteria?: SearchCriteria): Promise<RawLead[]> {
+  assertPublicSource('esa');
   const limit = maxItemsFromEnv(process.env.ESA_LIMIT);
   const wantCity = (criteria?.location.city || '').trim().toLowerCase();
   const keep = statusFilter();
 
   console.log('[ESA] fetching contractor dataset…');
-  const res = await fetch(DATA_URL, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+  const res = await fetchWithTimeout(DATA_URL, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
   if (!res.ok) throw new Error(`[ESA] data endpoint returned ${res.status}`);
   const all = (await res.json()) as ESARecord[];
   console.log(`[ESA] ${all.length} total records; filtering by status…`);

@@ -19,7 +19,9 @@ export function Stage5Generate() {
   const [thesisProgress, setThesisProgress] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
   const kickedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Tick elapsed for UI clock
   useEffect(() => {
@@ -34,12 +36,10 @@ export function Stage5Generate() {
     else if (progressMode === 'early') { setThesisProgress(1); }
   }, [progressMode]);
 
-  // Kick off thesis on mount (auto mode only). Deal search has moved to Surface 3 (/app).
-  useEffect(() => {
-    if (kickedRef.current || progressMode !== 'auto') return;
-    kickedRef.current = true;
-
-    const thesisTimer = setInterval(() => {
+  function generateThesis() {
+    setFailed(false);
+    setThesisProgress(0);
+    timerRef.current = setInterval(() => {
       setThesisProgress((p) => Math.min(p + 1, 4));
     }, 3000);
 
@@ -48,18 +48,30 @@ export function Stage5Generate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ archetype, facts, buckets }),
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`thesis ${r.status}`);
+        return r.json();
+      })
       .then((thesis) => {
-        clearInterval(thesisTimer);
+        if (timerRef.current) clearInterval(timerRef.current);
         setThesisProgress(5);
         dispatch({ type: 'SET_THESIS', thesis });
       })
       .catch(() => {
-        clearInterval(thesisTimer);
-        setThesisProgress(5);
+        if (timerRef.current) clearInterval(timerRef.current);
+        setThesisProgress(0);
+        setFailed(true);
       });
+  }
 
-    return () => clearInterval(thesisTimer);
+  // Kick off thesis on mount (auto mode only). Deal search has moved to Surface 3 (/app).
+  useEffect(() => {
+    if (kickedRef.current || progressMode !== 'auto') return;
+    kickedRef.current = true;
+    generateThesis();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,8 +93,6 @@ export function Stage5Generate() {
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
-
-  const thesisFlag = state.thesis?.flag;
 
   return (
     <div className="s5 fade-in">
@@ -124,10 +134,10 @@ export function Stage5Generate() {
             ))}
           </div>
 
-          {thesisFlag && !ready && (
-            <div className="s5-idle">
-              <div className="lbl">One flag</div>
-              <p className="q">{thesisFlag}</p>
+          {failed && (
+            <div className="s5-ready-card">
+              <div className="t">Thesis generation failed — usually a temporary model hiccup.</div>
+              <button onClick={generateThesis}>Try again</button>
             </div>
           )}
 

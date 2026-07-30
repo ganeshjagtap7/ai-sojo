@@ -8,10 +8,12 @@ You are ranking businesses for a potential acquisition. Score each business 0-10
   - A business that is NOT for sale (`forSale: false`, e.g. a directory/Google Maps listing) can never fully fit an acquisition mandate: cap it at 10 — it is a prospect to approach, not a live deal.
   - Unknown size / no preference = 10.
 - **Quality signals (0-15):** High rating + many reviews + years in business = 15
-- **Contact completeness (0-15):** Has owner name + email + phone = 15, partial = 5-10
+- **Reachability (0-15):** Has both a phone number and a website = 15, one of the two = 8, neither = 3
 
 Prefer live, affordable deals: when a for-sale listing and a non-listed business are otherwise comparable, the for-sale listing that fits the buyer's price/size should rank higher.
 
 Also write a 1-2 sentence matchReason for each that explains WHY this business is a good (or decent) lead for this specific buyer. When `forSale` is true and an `askingPrice` is known, say so explicitly — e.g. "Listed for sale at $450,000, within budget" — and note fit or miss against the buyer's price band.
 
 Return the array with matchScore and matchReason added.
+
+When "Buyer's thesis notes" are provided, write each matchReason in the buyer's own language — connect the business to their stated stickiness/archetype where it genuinely applies, and call out explicitly when a lead trips one of their stated disqualifiers (score it down accordingly).

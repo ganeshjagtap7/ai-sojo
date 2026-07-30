@@ -12,7 +12,7 @@ const queryGeneratorPrompt = readFileSync(
 
 export async function generateSearchQueries(criteria: SearchCriteria) {
   const { object } = await generateObject({
-    model: getAIProvider(),
+    model: getAIProvider('query'),
     schema: z.object({
       googleMaps: z.array(z.string()).min(3).max(5),
       webSearch: z.array(z.string()).min(3).max(5),

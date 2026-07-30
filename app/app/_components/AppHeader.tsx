@@ -53,6 +53,9 @@ export function AppHeader({ email, initials, savedCount }: Props) {
         <Link href="/app/history" className={isActive('/app/history') ? 'active' : ''}>
           History
         </Link>
+        <Link href="/app/theses" className={isActive('/app/theses') ? 'active' : ''}>
+          Theses
+        </Link>
       </nav>
 
       <div className="header-actions">

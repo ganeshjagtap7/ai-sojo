@@ -45,6 +45,14 @@ export default async function HistoryPage() {
 
   const rows = data ?? [];
 
+  const { data: activeThesis } = await supabase
+    .from('theses')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle<{ id: string }>();
+  const activeThesisId = activeThesis?.id ?? null;
+
   return (
     <div className="simple-page">
       <div className="simple-head">
@@ -63,12 +71,13 @@ export default async function HistoryPage() {
       {rows.length === 0 ? null : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
           {rows.map((r) => {
+            const otherThesis = activeThesisId !== null && r.thesis_id !== activeThesisId;
             const leadCount = Array.isArray(r.leads) ? r.leads.length : 0;
             const statusColor = r.status === 'running' ? 'var(--accent-deep)' : r.status === 'failed' ? 'var(--danger)' : 'var(--success)';
             return (
               <Link
                 key={r.id}
-                href={`/app?search=${r.id}`}
+                href={otherThesis ? '/app/theses' : `/app?search=${r.id}`}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr auto auto auto',
@@ -92,6 +101,7 @@ export default async function HistoryPage() {
                     }}
                   >
                     <span style={{ color: statusColor }}>● {r.status}</span> · {fmtAgo(r.created_at)}
+                    {otherThesis ? ' · different thesis' : ''}
                   </div>
                 </div>
                 <div
@@ -116,7 +126,7 @@ export default async function HistoryPage() {
                 >
                   leads
                 </div>
-                <span className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }}>Open</span>
+                <span className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }}>{otherThesis ? 'Switch thesis' : 'Open'}</span>
               </Link>
             );
           })}

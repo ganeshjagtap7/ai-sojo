@@ -53,20 +53,10 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Thesis not found' }, { status: 404 });
   }
 
-  // Deactivate the current active thesis first so the partial unique index
-  // (one is_active=true per user) doesn't conflict, then activate the target.
-  await supabase
-    .from('theses')
-    .update({ is_active: false })
-    .eq('user_id', user.id)
-    .eq('is_active', true);
-
-  const { error } = await supabase
-    .from('theses')
-    .update({ is_active: true })
-    .eq('id', thesisId)
-    .eq('user_id', user.id);
-
+  // Atomic switch — both the deactivate and the activate happen in one
+  // transaction inside the RPC, so a failure can never leave the user with
+  // zero active theses (migration 0005).
+  const { error } = await supabase.rpc('activate_thesis', { p_thesis_id: thesisId });
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

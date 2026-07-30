@@ -1,4 +1,5 @@
 import { ApifyClient } from 'apify-client';
+import { assertRunUsable } from '@/lib/scraping/apifyGuard';
 import { RawLead, SearchCriteria } from '@/lib/types';
 import { assertPublicSource, cappedMaxResults } from '@/lib/scraping/scrapingPolicy';
 
@@ -65,6 +66,7 @@ export async function scrapeManta(criteria: SearchCriteria): Promise<RawLead[]> 
     );
     runId = run.id;
     console.log(`[Manta] run id=${run.id} status=${run.status} category="${category}" states=${states.join(',')}`);
+    assertRunUsable(run, 'Manta');
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     const arr = items as Record<string, unknown>[];
     console.log(`[Manta] total items returned: ${arr.length}`);

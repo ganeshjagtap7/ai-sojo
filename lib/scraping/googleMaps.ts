@@ -1,4 +1,5 @@
 import { ApifyClient } from 'apify-client';
+import { assertRunUsable } from '@/lib/scraping/apifyGuard';
 import { RawLead } from '@/lib/types';
 import { assertPublicSource, cappedMaxResults } from '@/lib/scraping/scrapingPolicy';
 
@@ -24,6 +25,7 @@ export async function scrapeGoogleMaps(
   });
 
   console.log(`[GoogleMaps] run id=${run.id} status=${run.status}`);
+  assertRunUsable(run, 'GoogleMaps');
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
   console.log(`[GoogleMaps] items returned: ${items.length}`);
 

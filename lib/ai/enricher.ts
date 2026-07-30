@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { nanoid } from 'nanoid';
 import { getAIProvider } from './provider';
+import { chunkArray } from '@/lib/utils/chunk';
 import { RawLead, EnrichedLead, SearchCriteria } from '@/lib/types';
 
 const enricherPrompt = readFileSync(
@@ -11,24 +12,15 @@ const enricherPrompt = readFileSync(
   'utf-8'
 );
 
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-}
-
-// What the model returns per lead. `index` is model-supplied and untrusted —
-// see mergeBatch for why we never index the batch with it directly.
+// Only the fields that actually survive mergeBatch. The old schema also asked
+// for estimatedEmployees / ownerName / emailGuess, which mergeBatch discarded
+// on purpose (guesses presented as facts) — so we no longer pay the model to
+// produce them.
 const EnrichmentSchema = z.object({
   leads: z.array(
     z.object({
       index: z.number(),
       estimatedRevenue: z.string().nullable(),
-      estimatedEmployees: z.number().nullable(),
-      ownerName: z.string().nullable(),
-      emailGuess: z.string().nullable(),
       linkedinSearchUrl: z.string().nullable(),
     }),
   ),
@@ -82,20 +74,29 @@ export function mergeBatch(batch: RawLead[], enrichments: EnrichmentRow[]): Enri
 
 export async function enrichLeads(
   leads: RawLead[],
-  criteria: SearchCriteria
+  criteria: SearchCriteria,
+  // Absolute epoch-ms deadline. Batches that would start after it are emitted
+  // un-enriched — degraded enrichment always beats a Vercel hard timeout.
+  deadlineMs: number = Number.POSITIVE_INFINITY,
 ): Promise<EnrichedLead[]> {
   const BATCH_SIZE = 15;
   const batches = chunkArray(leads, BATCH_SIZE);
   const results: EnrichedLead[] = [];
 
-  for (const batch of batches) {
+  for (let bi = 0; bi < batches.length; bi++) {
+    if (Date.now() > deadlineMs) {
+      console.warn(`[Enricher] pipeline budget reached — emitting ${batches.length - bi} remaining batches un-enriched`);
+      for (let j = bi; j < batches.length; j++) results.push(...mergeBatch(batches[j], []));
+      break;
+    }
+    const batch = batches[bi];
     // Per-batch isolation: a failed batch (malformed model JSON → schema error,
     // provider 429/timeout) must NOT discard the batches already enriched. On
     // failure we emit the batch's leads un-enriched so no scraped work is lost.
     let enrichments: EnrichmentRow[] = [];
     try {
       const { object } = await generateObject({
-        model: getAIProvider(),
+        model: getAIProvider('enrich'),
         schema: EnrichmentSchema,
         prompt: `Enrich these businesses (industry context: ${criteria.industry.primary} in ${criteria.location.city}, ${criteria.location.state}):
 
@@ -109,6 +110,11 @@ ${JSON.stringify(batch.map((l, i) => ({
   reviews: l.reviewCount,
   categories: l.categories,
   employees: l.employeeCount,
+  // Deal fields — when the source already states real money numbers, the
+  // model must NOT estimate over them (see prompts/enricher.md).
+  statedRevenue: l.annualRevenue ?? null,
+  forSale: l.forSale ?? false,
+  askingPrice: l.askingPrice ?? null,
 })), null, 2)}`,
         system: enricherPrompt,
       });

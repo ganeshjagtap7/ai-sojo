@@ -2,6 +2,7 @@ import { generateText } from 'ai';
 import { z } from 'zod';
 import { getAIProvider } from '@/lib/ai/provider';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/ratelimit';
 
 export const maxDuration = 60;
 
@@ -48,6 +49,11 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { allowed } = await checkRateLimit(user.id, 'refine');
+  if (!allowed) {
+    return Response.json({ error: 'Daily refine limit reached. Try again tomorrow.' }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -76,7 +82,7 @@ export async function POST(req: Request) {
 
   try {
     const { text } = await generateText({
-      model: getAIProvider(),
+      model: getAIProvider('refine'),
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     });

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { mergeBatch } from '../lib/ai/enricher';
+import { mergeBatch, enrichLeads } from '../lib/ai/enricher';
 import type { RawLead } from '../lib/types';
 
 function lead(name: string, over: Partial<RawLead> = {}): RawLead {
@@ -12,8 +12,7 @@ function lead(name: string, over: Partial<RawLead> = {}): RawLead {
   };
 }
 const enr = (index: number, over = {}) => ({
-  index, estimatedRevenue: '$1M', estimatedEmployees: 5, ownerName: 'x',
-  emailGuess: 'x@y.com', linkedinSearchUrl: 'https://linkedin.com/search', ...over,
+  index, estimatedRevenue: '$1M', linkedinSearchUrl: 'https://linkedin.com/search', ...over,
 });
 
 test('out-of-range model index does NOT throw and every lead is still returned', () => {
@@ -49,4 +48,25 @@ test('duplicate indices from the model do not double-emit a lead', () => {
   const out = mergeBatch([lead('A'), lead('B')], [enr(0, { estimatedRevenue: '$2M' }), enr(0, { estimatedRevenue: '$9M' })]);
   assert.equal(out.length, 2); // exactly one row per batch lead
   assert.equal(out[0].businessDetails.estimatedRevenue, '$2M'); // first enrichment for index 0 wins
+});
+
+test('a passed deadline short-circuits enrichment to un-enriched leads (no model call)', async () => {
+  const raw = {
+    businessName: 'Acme Plumbing', address: null, city: 'Atlanta', state: 'GA', zip: null,
+    phone: '404-555-0100', website: null, googleRating: null, reviewCount: null, categories: [],
+    yearsInBusiness: null, employeeCount: null, bbbRating: null, bbbAccredited: null,
+    source: 'google_maps' as const, sourceUrl: null, rawData: {},
+  };
+  const criteria = {
+    location: { city: 'Atlanta', state: 'GA', country: 'United States', radiusMiles: 25 },
+    industry: { primary: 'Plumbing', subSectors: [], keywords: [] },
+    businessSize: { revenueMin: null, revenueMax: null, employeeMin: null, employeeMax: null },
+    preferences: { businessAgeYears: null, ownerOperated: null, disqualifiers: [] },
+    searcherType: 'unknown' as const,
+  };
+  // Deadline in the past → must return without ever touching the model/network.
+  const out = await enrichLeads([raw], criteria, Date.now() - 1);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].businessName, 'Acme Plumbing');
+  assert.equal(out[0].businessDetails.estimatedRevenue, null);
 });

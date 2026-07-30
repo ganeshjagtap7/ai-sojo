@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 
 /** The gated endpoints — each carries its own independent daily budget. */
-export type RateLimitKey = 'search' | 'chat' | 'thesis';
+export type RateLimitKey = 'search' | 'chat' | 'thesis' | 'refine';
 
 /**
  * Per-endpoint daily caps (UTC day). Each is read from `RATE_LIMIT_<KEY>` and
@@ -15,6 +15,9 @@ const DEFAULT_LIMITS: Record<RateLimitKey, number> = {
   search: 25,
   chat: 100,
   thesis: 25,
+  // Refine is one cheap generateText per submit, but it was the only
+  // model-calling route with NO cap. 50/day is far above real usage.
+  refine: 50,
 };
 
 function limitFor(key: RateLimitKey): number {

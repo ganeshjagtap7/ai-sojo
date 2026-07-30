@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getAIProvider } from './provider';
+import { chunkArray } from '@/lib/utils/chunk';
 import { EnrichedLead, RankedLead, SearchCriteria } from '@/lib/types';
 
 const rankerPrompt = readFileSync(
@@ -43,9 +44,8 @@ export function rankerLeadRows(leads: EnrichedLead[]) {
     bbbRating: l.businessDetails?.bbbRating,
     bbbAccredited: l.businessDetails?.bbbAccredited,
     yearsInBusiness: l.businessDetails?.yearsInBusiness,
-    hasOwnerName: !!l.contact?.ownerName,
-    hasEmail: !!l.contact?.email,
     hasPhone: !!l.contact?.phone,
+    hasWebsite: !!l.website,
   }));
 }
 
@@ -63,7 +63,7 @@ type Ranking = z.infer<typeof RankingSchema>['leads'][number];
 // Neutral fallback surfaced when the whole ranker call fails — better to show
 // leads un-ranked (fail-soft, like the enricher) than to 500 the whole search
 // or silently drop everything below the pipeline's score threshold.
-const FALLBACK_SCORE = 50;
+export const FALLBACK_SCORE = 50;
 const FALLBACK_REASON = 'Surfaced un-ranked — the ranker was unavailable for this search.';
 
 /**
@@ -100,44 +100,77 @@ export function mergeRankings(
     .sort((a, b) => b.matchScore - a.matchScore);
 }
 
-export async function rankLeads(
-  leads: EnrichedLead[],
-  criteria: SearchCriteria
-): Promise<RankedLead[]> {
-  // A ranker failure (malformed model JSON → schema error, provider 429/timeout)
-  // must not kill a search that already scraped + enriched leads. On failure we
-  // surface every lead un-ranked instead of throwing.
-  let rankings: Ranking[] = [];
-  let failed = false;
-  try {
-    const { object } = await generateObject({
-      model: getAIProvider(),
-      schema: RankingSchema,
-      prompt: `Rank these ${leads.length} businesses for a buyer looking for:
+/**
+ * Leads per ranking call. The old single mega-call serialized EVERY lead into
+ * one prompt; past ~100 leads the model's output hit the token ceiling and
+ * silently omitted leads, which then scored 0 and were dropped below the
+ * pipeline threshold. Small batches keep each response far from the ceiling.
+ */
+export const RANK_BATCH_SIZE = 25;
+
+/** Exported for tests — the exact per-batch user prompt. */
+export function buildRankerPrompt(
+  batch: EnrichedLead[],
+  criteria: SearchCriteria,
+  thesisNotes?: string,
+): string {
+  const notesSection = thesisNotes?.trim()
+    ? `\n\nBuyer's thesis notes (their own words — use them to sharpen each matchReason, and score DOWN any lead that clearly hits one of their disqualifiers):\n${thesisNotes.trim()}`
+    : '';
+  return `Rank these ${batch.length} businesses for a buyer looking for:
 Industry: ${criteria.industry.primary} (${criteria.industry.subSectors.join(', ') || 'any sub-sector'})
 Location: ${criteria.location.city}, ${criteria.location.state} (${criteria.location.radiusMiles}mi radius)
 Size: ${formatSizePrefs(criteria.businessSize)}
-Disqualifiers: ${criteria.preferences.disqualifiers.join(', ') || 'none'}
+Disqualifiers: ${criteria.preferences.disqualifiers.join(', ') || 'none'}${notesSection}
 
 Businesses:
-${JSON.stringify(rankerLeadRows(leads), null, 2)}`,
-      system: rankerPrompt,
-    });
-    rankings = object.leads;
-  } catch (err) {
-    console.error('[Ranker] ranking failed — surfacing leads un-ranked:', err);
-    failed = true;
-  }
+${JSON.stringify(rankerLeadRows(batch), null, 2)}`;
+}
 
-  // Visibility: a normal response that scores fewer leads than we sent means the
-  // model dropped some — log it so the divergence is never silent.
-  if (!failed && rankings.length < leads.length) {
-    console.warn(`[Ranker] model scored ${rankings.length}/${leads.length} leads; ${leads.length - rankings.length} fell back to ${0}`);
-  }
+async function rankBatch(batch: EnrichedLead[], criteria: SearchCriteria, thesisNotes?: string): Promise<Ranking[]> {
+  const { object } = await generateObject({
+    model: getAIProvider('rank'),
+    schema: RankingSchema,
+    prompt: buildRankerPrompt(batch, criteria, thesisNotes),
+    system: rankerPrompt,
+  });
+  return object.leads;
+}
 
-  return mergeRankings(
-    leads,
-    rankings,
-    failed ? { score: FALLBACK_SCORE, reason: FALLBACK_REASON } : { score: 0, reason: '' },
+export async function rankLeads(
+  leads: EnrichedLead[],
+  criteria: SearchCriteria,
+  deadlineMs: number = Number.POSITIVE_INFINITY,
+  thesisNotes?: string,
+): Promise<RankedLead[]> {
+  // Batched + parallel. Each batch fails soft on its own: a model error in one
+  // batch surfaces THAT batch un-ranked (neutral score) without touching the
+  // others, and no batch is big enough to truncate. Past the deadline, batches
+  // reject immediately so their leads surface un-ranked instead of breaching the
+  // route's maxDuration.
+  const batches = chunkArray(leads, RANK_BATCH_SIZE);
+  const settled = await Promise.allSettled(
+    batches.map((b) =>
+      Date.now() > deadlineMs
+        ? Promise.reject(new Error('pipeline budget exceeded'))
+        : rankBatch(b, criteria, thesisNotes),
+    ),
   );
+
+  const merged: RankedLead[] = [];
+  settled.forEach((res, i) => {
+    const batch = batches[i];
+    if (res.status === 'fulfilled') {
+      if (res.value.length < batch.length) {
+        console.warn(`[Ranker] batch ${i}: model scored ${res.value.length}/${batch.length} leads`);
+      }
+      merged.push(...mergeRankings(batch, res.value, { score: 0, reason: '' }));
+    } else {
+      console.error(`[Ranker] batch ${i} failed — surfacing un-ranked:`, res.reason);
+      merged.push(...mergeRankings(batch, [], { score: FALLBACK_SCORE, reason: FALLBACK_REASON }));
+    }
+  });
+
+  // mergeRankings sorts within each batch; re-sort globally.
+  return merged.sort((a, b) => b.matchScore - a.matchScore);
 }

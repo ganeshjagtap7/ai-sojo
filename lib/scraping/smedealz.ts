@@ -9,6 +9,8 @@
 // page, so we DON'T capture them.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
+import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://smedealz.com';
 const LIST_API = `${SITE}/ListingAPI/getListings`;
@@ -69,7 +71,7 @@ function finRow(d: DetailItem, metric: 'sale' | 'ebidta' | 'pat'): string {
 
 async function fetchDetail(id: string): Promise<DetailItem | null> {
   try {
-    const res = await fetch(DETAIL_API, {
+    const res = await fetchWithTimeout(DETAIL_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -88,7 +90,8 @@ async function fetchDetail(id: string): Promise<DetailItem | null> {
 }
 
 export async function scrapeSmeDealz(_criteria?: SearchCriteria): Promise<RawLead[]> {
-  const listRes = await fetch(LIST_API, {
+  assertPublicSource('smedealz');
+  const listRes = await fetchWithTimeout(LIST_API, {
     headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json', 'User-Agent': UA },
   });
   if (!listRes.ok) throw new Error(`getListings failed: ${listRes.status}`);

@@ -66,6 +66,16 @@ export async function POST(req: Request) {
   // the stream just surfaces phase-by-phase progress so the UI can show a live
   // label, then a terminal result or error event. The 401/429 gates above
   // already returned plain JSON before we ever open this stream.
+
+  // The buyer's own thesis words (stickiness, disqualifier, vision...) — the
+  // ranker uses them to write matchReasons in the buyer's language.
+  const thesisNotes = body.buckets && typeof body.buckets === 'object'
+    ? Object.entries(body.buckets as Record<string, unknown>)
+        .filter(([, v]) => typeof v === 'string' && v && v !== '(skipped)')
+        .map(([k, v]) => `${k}: ${v as string}`)
+        .join('\n')
+    : '';
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -75,7 +85,7 @@ export async function POST(req: Request) {
       try {
         const { leads, metadata } = await runSearchPipeline(criteria, (e) =>
           send({ type: 'progress', ...e }),
-        );
+        thesisNotes);
         send({ type: 'result', leads, metadata });
       } catch (err) {
         const { userMessage, logDetail } = toFriendlyError(err);
