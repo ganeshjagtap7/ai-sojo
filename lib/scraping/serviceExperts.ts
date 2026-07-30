@@ -9,6 +9,7 @@
 //   Default scrapes ALL US centers (~a few hundred). SE_LIMIT=50 caps.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
 import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://www.serviceexperts.com';
@@ -33,7 +34,7 @@ const limitFromEnv = (): number => {
 
 async function get(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' } });
+    const res = await fetchWithTimeout(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' } });
     if (!res.ok) return null;
     return await res.text();
   } catch {

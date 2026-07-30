@@ -10,6 +10,7 @@
 //   keywords are fetched first, capped at SCRAPER_MAX_ITEMS (default 150).
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
 import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const SITE = 'https://www.franchisegator.com';
@@ -54,7 +55,7 @@ export async function scrapeFranchiseGator(criteria?: SearchCriteria): Promise<R
   const headers = { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' };
 
   // --- 1. Enumerate franchise URLs from the profiles sitemap ---
-  const xml = await (await fetch(SITEMAP, { headers })).text();
+  const xml = await (await fetchWithTimeout(SITEMAP, { headers })).text();
   const urls = Array.from(new Set(Array.from(xml.matchAll(/<loc>([^<]*\/franchises\/[a-z0-9-]+\/)<\/loc>/gi)).map((m) => m[1])));
   // Mandate-relevant slugs first (slug ≈ franchise name), then the rest.
   const kw = keywordsOf(criteria);
@@ -72,7 +73,7 @@ export async function scrapeFranchiseGator(criteria?: SearchCriteria): Promise<R
       const i = idx++;
       const url = targets[i];
       try {
-        const res = await fetch(url, { headers });
+        const res = await fetchWithTimeout(url, { headers });
         if (!res.ok) continue;
         const h = await res.text();
         const name = clean((h.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1]).replace(/\s*-\s*Franchise\s*$/i, '');

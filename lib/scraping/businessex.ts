@@ -13,6 +13,7 @@
 //   detail fetches happen only for the kept items.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
 import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const API = 'https://bxapi.businessex.com/bexapi';
@@ -131,7 +132,7 @@ export async function scrapeBusinessEx(criteria?: SearchCriteria): Promise<RawLe
   for (let page = 1; items.length < limit && (page - 1) * PER_PAGE < total && page <= maxPages; page++) {
     let data: { businesslist?: ListItem[]; businessCount?: number };
     try {
-      const res = await fetch(`${API}/getBusinessListDemo`, {
+      const res = await fetchWithTimeout(`${API}/getBusinessListDemo`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -167,7 +168,7 @@ export async function scrapeBusinessEx(criteria?: SearchCriteria): Promise<RawLe
       const code = items[i].profileStr;
       if (!code) continue;
       try {
-        const res = await fetch(`${API}/sellerprofile/${code}?userId=0`, { headers });
+        const res = await fetchWithTimeout(`${API}/sellerprofile/${code}?userId=0`, { headers });
         if (res.ok) {
           const sd = jwtSellerData(await res.text());
           if (sd) details.set(code, sd);

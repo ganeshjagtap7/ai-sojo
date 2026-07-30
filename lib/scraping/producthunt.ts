@@ -10,6 +10,7 @@
 //   the 500 most recent launches.
 
 import { existsSync, readFileSync } from 'fs';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
 import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 import { join } from 'path';
 import { RawLead, SearchCriteria } from '@/lib/types';
@@ -71,7 +72,7 @@ export async function scrapeProductHunt(_criteria?: SearchCriteria): Promise<Raw
   while (nodes.length < limit) {
     let res: Response;
     try {
-      res = await fetch(ENDPOINT, {
+      res = await fetchWithTimeout(ENDPOINT, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ query: QUERY, variables: { after } }),

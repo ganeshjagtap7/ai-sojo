@@ -8,6 +8,7 @@
 // custom fields. So we just hit that endpoint — no per-listing detail calls.
 
 import { RawLead, SearchCriteria } from '@/lib/types';
+import { fetchWithTimeout } from '@/lib/scraping/fetchWithTimeout';
 import { assertPublicSource } from '@/lib/scraping/scrapingPolicy';
 
 const API = 'https://admin.buybiz.co.in/api/get-item';
@@ -63,7 +64,7 @@ export async function scrapeBuyBiz(_criteria?: SearchCriteria): Promise<RawLead[
   let page = 1;
   let lastPage = 1;
   do {
-    const res = await fetch(`${API}?page=${page}&limit=50&sort_by=new-to-old`, {
+    const res = await fetchWithTimeout(`${API}?page=${page}&limit=50&sort_by=new-to-old`, {
       headers: { Accept: 'application/json', 'User-Agent': UA, 'X-Requested-With': 'XMLHttpRequest' },
     });
     if (!res.ok) break;
