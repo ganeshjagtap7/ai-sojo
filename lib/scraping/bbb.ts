@@ -1,4 +1,5 @@
 import { ApifyClient } from 'apify-client';
+import { assertRunUsable } from '@/lib/scraping/apifyGuard';
 import { RawLead } from '@/lib/types';
 import { assertPublicSource, cappedMaxResults } from '@/lib/scraping/scrapingPolicy';
 
@@ -59,6 +60,7 @@ export async function scrapeBBB(
       continue;
     }
     console.log(`[BBB] run id=${r.value.id} status=${r.value.status} query="${queries[i]}"`);
+    assertRunUsable(r.value, 'BBB');
     const { items } = await client.dataset(r.value.defaultDatasetId).listItems();
     allItems.push(...(items as Record<string, unknown>[]));
   }
