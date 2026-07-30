@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { RankedLead, SearchCriteria } from '@/lib/types';
+import type { RankedLead, SearchCriteria, SearchMetadata } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
 import type { ProgressEvent } from '@/lib/pipeline/searchPipeline';
 import { ResultCard } from './ResultCard';
@@ -25,6 +25,7 @@ export interface SearchSummary {
   leads: RankedLead[] | null;
   status: 'running' | 'complete' | 'failed';
   created_at: string;
+  search_metadata?: SearchMetadata | null;
 }
 
 interface Props {
@@ -281,6 +282,14 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
                 <>
                   <span className="sep">·</span>
                   <span>ranked by match</span>
+                  {activeSearch.search_metadata && (
+                    <>
+                      <span className="sep">·</span>
+                      <span>
+                        {activeSearch.search_metadata.sourcesUsed.length} sources · {activeSearch.search_metadata.totalScraped} scraped → {activeSearch.search_metadata.afterFiltering} qualified · {activeSearch.search_metadata.searchDurationSeconds}s
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </div>

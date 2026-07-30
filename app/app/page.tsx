@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Workspace } from './_components/Workspace';
-import type { RankedLead } from '@/lib/types';
+import type { RankedLead, SearchMetadata } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +24,7 @@ interface SearchRow {
   leads: RankedLead[] | null;
   status: 'running' | 'complete' | 'failed';
   created_at: string;
+  search_metadata: SearchMetadata | null;
 }
 
 export default async function AppHomePage({
@@ -58,7 +59,7 @@ export default async function AppHomePage({
   // All search threads for this user+thesis (for sidebar tabs).
   const { data: searches } = await supabase
     .from('searches')
-    .select('id, query, leads, status, created_at')
+    .select('id, query, leads, status, created_at, search_metadata')
     .eq('user_id', user.id)
     .eq('thesis_id', thesis.id)
     .order('created_at', { ascending: false })
