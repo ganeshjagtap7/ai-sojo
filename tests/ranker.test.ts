@@ -192,3 +192,21 @@ test('buildRankerPrompt includes thesis notes when provided and omits the sectio
   const withoutNotes = buildRankerPrompt([el], criteria);
   assert.doesNotMatch(withoutNotes, /Buyer's thesis notes/);
 });
+
+test('buildRankerPrompt surfaces industry keywords so the searched intent reaches the ranker', () => {
+  const el = { businessName: 'X', address: null, city: null, state: null, zip: null,
+    phone: null, website: null, googleRating: null, reviewCount: null, categories: [],
+    yearsInBusiness: null, employeeCount: null, bbbRating: null, bbbAccredited: null,
+    source: 'bizbuysell' as const, sourceUrl: null, rawData: {},
+    id: 'x', contact: { ownerName: null, phone: null, email: null, linkedin: null, website: null },
+    businessDetails: { yearsInBusiness: null, employeeCount: null, estimatedRevenue: null, googleRating: null,
+      reviewCount: null, bbbRating: null, bbbAccredited: null, operatingHours: null, categories: [] } };
+  const criteria = {
+    location: { city: '', state: 'FL', country: 'United States', radiusMiles: 25 },
+    industry: { primary: 'Franchise', subSectors: [], keywords: ['franchise'] },
+    businessSize: { revenueMin: null, revenueMax: null, employeeMin: null, employeeMax: null },
+    preferences: { businessAgeYears: null, ownerOperated: null, disqualifiers: [] },
+    searcherType: 'unknown' as const,
+  };
+  assert.match(buildRankerPrompt([el], criteria), /also match these terms: franchise/);
+});
