@@ -118,7 +118,7 @@ export function buildRankerPrompt(
     ? `\n\nBuyer's thesis notes (their own words — use them to sharpen each matchReason, and score DOWN any lead that clearly hits one of their disqualifiers):\n${thesisNotes.trim()}`
     : '';
   return `Rank these ${batch.length} businesses for a buyer looking for:
-Industry: ${criteria.industry.primary} (${criteria.industry.subSectors.join(', ') || 'any sub-sector'})
+Industry: ${criteria.industry.primary} (${criteria.industry.subSectors.join(', ') || 'any sub-sector'})${criteria.industry.keywords.length ? `; also match these terms: ${criteria.industry.keywords.join(', ')}` : ''}
 Location: ${criteria.location.city}, ${criteria.location.state} (${criteria.location.radiusMiles}mi radius)
 Size: ${formatSizePrefs(criteria.businessSize)}
 Disqualifiers: ${criteria.preferences.disqualifiers.join(', ') || 'none'}${notesSection}

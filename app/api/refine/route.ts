@@ -28,6 +28,7 @@ Schema:
 
 Rules:
 - Only include fields the user explicitly mentioned or strongly implied. Don't fill in things they didn't say.
+- Keep the SPECIFIC business type/model the user names — never flatten it into a generic like "business services". A named model/category (franchise, e-commerce, SaaS, subscription, dropshipping, laundromat, car wash, vending route, etc.) IS the industry: put it in industry.primary and mirror it in industry.keywords. Example: "franchise business in Florida" => industry {primary:"Franchise", keywords:["franchise"]}, location {state:"FL", country:"United States"}.
 - Distinguish REVENUE from buy-side PRICE (what the buyer will pay to acquire):
   - Revenue only when the words revenue / sales / turnover / topline appear: "revenue under $5M" => revenueMax: 5_000_000. "sales over $2M" => revenueMin: 2_000_000. "$3-10M in revenue" => revenueMin: 3_000_000, revenueMax: 10_000_000.
   - Asking PRICE for budget/acquisition phrasing OR a bare figure attached to the search: "under $500k" / "budget $500k" / "acquire under $500k" / "priced below $1M" / "up to $2M" => priceMax: 500_000 (etc). "over $200k" (as a price floor) => priceMin.
