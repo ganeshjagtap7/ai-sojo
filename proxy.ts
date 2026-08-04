@@ -11,9 +11,16 @@ export async function proxy(request: NextRequest) {
   // Gate /app/* — unauthenticated users get bounced to /login with a return path.
   const { pathname } = request.nextUrl;
   if (pathname.startsWith('/app') && !user) {
+    // Preserve the full return path INCLUDING the query string so deep links
+    // like /app?search=<id> survive the login round-trip. (The hash/#fragment
+    // is intentionally omitted — browsers never send it to the server, so
+    // middleware can't see it.) Clear the cloned URL's own params first, else
+    // the original query would leak onto the /login URL itself.
+    const next = pathname + request.nextUrl.search;
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
-    loginUrl.searchParams.set('next', pathname);
+    loginUrl.search = '';
+    loginUrl.searchParams.set('next', next);
     return NextResponse.redirect(loginUrl);
   }
 
