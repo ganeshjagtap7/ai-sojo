@@ -15,6 +15,8 @@ const SOURCE_CURRENCY: Record<string, string> = {
   smedealz: 'INR',
   indiabiz: 'INR',
   mergerdomo: 'INR',
+  tobuz: 'INR',
+  businessdeals: 'INR',
 };
 
 /** Detect an ISO 4217 code from raw listing text (a price string, description…).
