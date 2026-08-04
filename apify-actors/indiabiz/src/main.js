@@ -21,7 +21,11 @@ const priceDisplay = (n, currency = CURRENCY) =>
 function parseINR(raw) {
   if (typeof raw !== 'string') return null;
   const s = raw.toLowerCase().replace(/,/g, '');
-  const m = s.match(/([\d.]+)\s*(crore|cr|lakh|lac|l|k)?/);
+  // A dash range like "10-50 Lakh" carries ONE trailing unit that applies to
+  // both numbers; the plain match would grab "10" with no unit and return 10
+  // instead of 1,000,000. Detect the range and attach the unit to the lower bound.
+  const range = s.match(/([\d.]+)\s*-\s*[\d.]+\s*(crore|cr|lakh|lac|l|k)\b/);
+  const m = range || s.match(/([\d.]+)\s*(crore|cr|lakh|lac|l|k)?/);
   if (!m) return null;
   const n = parseFloat(m[1]);
   if (!Number.isFinite(n)) return null;
