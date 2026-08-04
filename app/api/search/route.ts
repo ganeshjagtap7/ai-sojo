@@ -19,7 +19,12 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Daily limit reached. Try again tomorrow.' }, { status: 429 });
   }
 
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
 
   let criteria: SearchCriteria;
   if (body.criteria) {
