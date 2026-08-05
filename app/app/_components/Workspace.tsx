@@ -45,20 +45,33 @@ type ScreenState =
 
 type FilterTab = 'all' | 'top' | 'saved';
 
+// The resting screen for a given active search. Searches persist only on
+// completion now, so a stored 'running' status is a stale row from the old async
+// flow — never an actual in-flight search; surface it as retryable instead.
+function deriveScreen(activeSearch: SearchSummary | null, searchCount: number): ScreenState {
+  if (!activeSearch && searchCount === 0) return { kind: 'initial-loading' };
+  if (activeSearch?.status === 'running') {
+    return { kind: 'failed', error: 'This search never finished — run it again.' };
+  }
+  return { kind: 'idle' };
+}
+
 export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initialSavedIds }: Props) {
   const router = useRouter();
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts();
-  const [screen, setScreen] = useState<ScreenState>(() =>
-    !activeSearch && searches.length === 0
-      ? { kind: 'initial-loading' }
-      : activeSearch?.status === 'running'
-      ? // Searches persist only on completion now, so a stored 'running' status
-        // is a stale row from the old async flow — never an actual in-flight
-        // search. Rendering it as running would spin forever with no request
-        // behind it; surface it as retryable instead.
-        { kind: 'failed', error: 'This search never finished — run it again.' }
-      : { kind: 'idle' },
-  );
+  const [screen, setScreen] = useState<ScreenState>(() => deriveScreen(activeSearch, searches.length));
+  // Re-derive the resting screen when the user switches to a DIFFERENT search
+  // (tab list / history) — the component re-renders with a new activeSearch prop
+  // rather than remounting, so the one-time lazy initializer above would keep
+  // showing the previous search's screen (e.g. a stale "failed").
+  const shownSearchIdRef = useRef(activeSearch?.id ?? null);
+  useEffect(() => {
+    const id = activeSearch?.id ?? null;
+    if (id === shownSearchIdRef.current) return; // initial mount or same search
+    shownSearchIdRef.current = id;
+    setScreen(deriveScreen(activeSearch, searches.length));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSearch?.id]);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [savedSet, setSavedSet] = useState<Set<string>>(() => new Set(initialSavedIds));
   const [drawerLead, setDrawerLead] = useState<RankedLead | null>(null);
