@@ -33,6 +33,7 @@ function sanitize(parsed: unknown): FlowState {
     facts: p.facts && typeof p.facts === 'object' ? p.facts : {},
     buckets: p.buckets && typeof p.buckets === 'object' ? p.buckets : {},
     leads: Array.isArray(p.leads) ? p.leads : [],
+    convo: Array.isArray(p.convo) ? p.convo : [],
   };
 }
 

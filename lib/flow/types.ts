@@ -48,6 +48,13 @@ export interface FlowState {
   thesis: Thesis | null;
   progressMode: 'auto' | 'early' | 'mid' | 'done';
   leads: RankedLead[];
+  // Stage 3 chat transcript. Persisted here (not local component state) so it
+  // survives the stage remount on back-navigation — otherwise the visible chat
+  // resets to the opener while the extracted buckets persist, and the stateless
+  // /api/chat loses all memory of the prior conversation. Typed as unknown[] to
+  // keep the component's rich ConvoItem type out of the shared flow module; the
+  // component casts it back on read.
+  convo: unknown[];
 }
 
 export const INITIAL_STATE: FlowState = {
@@ -59,11 +66,13 @@ export const INITIAL_STATE: FlowState = {
   thesis: null,
   progressMode: 'auto',
   leads: [],
+  convo: [],
 };
 
 export type FlowAction =
   | { type: 'SET_STAGE'; stage: Stage }
   | { type: 'SET_EMAIL'; email: string }
+  | { type: 'SET_CONVO'; convo: unknown[] }
   | { type: 'SET_ARCHETYPE'; archetype: Archetype }
   | { type: 'SET_FACTS'; facts: Facts }
   | { type: 'PATCH_BUCKETS'; patch: Buckets }
