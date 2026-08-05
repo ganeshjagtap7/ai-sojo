@@ -1,6 +1,17 @@
 import { RawLead } from '@/lib/types';
 import { normalizeName, normalizePhone, extractDomain, normalizeUrl } from './normalizers';
 
+// Sources whose `phone` is the BUSINESS's own line (local/niche directories) —
+// safe to use as an identity key. Marketplaces list a broker/seller
+// intermediary's number (e.g. BizBuySell's contact_phone is the broker), so two
+// unrelated businesses listed by the same broker share it. Merging on phone
+// alone would silently collapse them into one — so we only trust phone as an
+// identity signal for these sources.
+const BUSINESS_PHONE_SOURCES = new Set<RawLead['source']>([
+  'google_maps', 'web_search', 'bbb', 'yellowpages', 'manta',
+  'hvacinformed', 'esa', 'serviceexperts',
+]);
+
 function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
   return {
     ...existing,
@@ -52,7 +63,9 @@ function keysFor(lead: RawLead): string[] {
   // (online businesses cross-listed across marketplaces).
   if (nameKey && lead.city) keys.push(`name::${nameKey}::${lead.city.toLowerCase()}`);
   else if (nameKey) keys.push(`name::${nameKey}`);
-  if (phoneKey) keys.push(`phone::${phoneKey}`);
+  // Only trust phone as an identity key for sources where it's the business's
+  // own line — not marketplaces/brokers (see BUSINESS_PHONE_SOURCES).
+  if (phoneKey && BUSINESS_PHONE_SOURCES.has(lead.source)) keys.push(`phone::${phoneKey}`);
   if (domainKey) keys.push(`domain::${domainKey}`);
   return keys;
 }

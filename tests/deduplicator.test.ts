@@ -128,3 +128,19 @@ test('two different online businesses (no city) stay separate', () => {
   ]);
   assert.equal(out.length, 2);
 });
+
+test('broker-phone sources do NOT merge two businesses that share a broker number', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'Elegant Nails Salon', city: 'Miami', source: 'bizbuysell', phone: '305-555-7777', sourceUrl: 'https://bizbuysell.com/a/1' }),
+    lead({ businessName: "Joe's Diner", city: 'Tampa', source: 'bizbuysell', phone: '305-555-7777', sourceUrl: 'https://bizbuysell.com/a/2' }),
+  ]);
+  assert.equal(out.length, 2); // same broker phone must not collapse unrelated businesses
+});
+
+test('local-directory sources still merge on the business phone', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'ABC Cleaning', city: 'Atlanta', source: 'google_maps', phone: '404-555-1234' }),
+    lead({ businessName: 'XYZ Cleaning', city: 'Atlanta', source: 'yellowpages', phone: '404-555-1234' }),
+  ]);
+  assert.equal(out.length, 1); // same real business line → still one business
+});
