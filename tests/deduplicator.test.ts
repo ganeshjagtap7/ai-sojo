@@ -162,3 +162,27 @@ test('real names with no city still merge (placeholder guard is name-specific)',
   ]);
   assert.equal(out.length, 1); // genuine shared name still merges cross-marketplace
 });
+
+test('mismatched-currency merge does NOT blend monetary fields across currencies', () => {
+  // Two leads that share an identity key (same listing URL) but report different
+  // currencies. The merge keeps `existing`'s monetary set and pulls nothing
+  // money-related from the INR lead — no USD-price + INR-revenue franken-record.
+  const out = deduplicateLeads([
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/x', currency: 'USD', askingPrice: 200000, annualRevenue: null }),
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/x', currency: 'INR', askingPrice: null, annualRevenue: 5000000 }),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].currency, 'USD'); // stays the existing lead's currency
+  assert.equal(out[0].askingPrice, 200000);
+  assert.equal(out[0].annualRevenue, null); // INR revenue NOT pulled in under a USD label
+});
+
+test('same-currency merge still fills missing monetary fields', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/y', currency: 'USD', askingPrice: 200000, annualRevenue: null }),
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/y', currency: 'USD', askingPrice: null, annualRevenue: 90000 }),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].askingPrice, 200000);
+  assert.equal(out[0].annualRevenue, 90000); // same currency → still merges
+});

@@ -21,6 +21,39 @@ const BUSINESS_PHONE_SOURCES = new Set<RawLead['source']>([
 const GENERIC_NAMES = new Set(['unknown', 'unknown company', 'na', 'n a', 'untitled', 'no name']);
 
 function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
+  // Monetary deal fields are only comparable within one currency. If both leads
+  // declare a currency and they DIFFER, blending them (e.g. askingPrice in USD +
+  // annualRevenue in INR under a single currency label) produces a financially
+  // misleading record. In that case keep `existing`'s monetary set untouched and
+  // pull nothing money-related from `incoming`. Non-monetary fields (address,
+  // phone, founder, forSale, etc.) are currency-independent and still merge.
+  const currencyConflict =
+    existing.currency != null &&
+    incoming.currency != null &&
+    existing.currency !== incoming.currency;
+
+  const deal = currencyConflict
+    ? {
+        mrr: existing.mrr,
+        askingPrice: existing.askingPrice,
+        revenueMultiple: existing.revenueMultiple,
+        profitMultiple: existing.profitMultiple,
+        annualRevenue: existing.annualRevenue,
+        annualProfit: existing.annualProfit,
+        currency: existing.currency,
+      }
+    : {
+        // §6: a business cross-listed on two marketplaces must not lose its
+        // price/revenue/etc. on merge — keep whichever source supplied them.
+        mrr: existing.mrr ?? incoming.mrr,
+        askingPrice: existing.askingPrice ?? incoming.askingPrice,
+        revenueMultiple: existing.revenueMultiple ?? incoming.revenueMultiple,
+        profitMultiple: existing.profitMultiple ?? incoming.profitMultiple,
+        annualRevenue: existing.annualRevenue ?? incoming.annualRevenue,
+        annualProfit: existing.annualProfit ?? incoming.annualProfit,
+        currency: existing.currency ?? incoming.currency,
+      };
+
   return {
     ...existing,
     address: existing.address ?? incoming.address,
@@ -36,15 +69,7 @@ function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
     employeeCount: existing.employeeCount ?? incoming.employeeCount,
     bbbRating: existing.bbbRating ?? incoming.bbbRating,
     bbbAccredited: existing.bbbAccredited ?? incoming.bbbAccredited,
-    // Deal fields (§6): a business cross-listed on two marketplaces must not lose
-    // its price/revenue/etc. on merge — keep whichever source supplied them.
-    mrr: existing.mrr ?? incoming.mrr,
-    askingPrice: existing.askingPrice ?? incoming.askingPrice,
-    revenueMultiple: existing.revenueMultiple ?? incoming.revenueMultiple,
-    profitMultiple: existing.profitMultiple ?? incoming.profitMultiple,
-    annualRevenue: existing.annualRevenue ?? incoming.annualRevenue,
-    annualProfit: existing.annualProfit ?? incoming.annualProfit,
-    currency: existing.currency ?? incoming.currency,
+    ...deal,
     forSale: existing.forSale ?? incoming.forSale,
     founderName: existing.founderName ?? incoming.founderName,
     foundedDate: existing.foundedDate ?? incoming.foundedDate,
