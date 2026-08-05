@@ -35,10 +35,12 @@ export async function generateThesis(input: {
       headline: String(parsed.headline ?? ''),
       archetypeLabel: String(parsed.archetypeLabel ?? ''),
       flag: parsed.flag == null ? null : String(parsed.flag),
+      usedFallback: false,
     };
   } catch (err) {
     console.error('[thesis] fallback triggered:', err);
-    return fallbackThesis(input);
+    // Signal the fallback so the API + UI can surface it (never persisted).
+    return { ...fallbackThesis(input), usedFallback: true };
   }
 }
 

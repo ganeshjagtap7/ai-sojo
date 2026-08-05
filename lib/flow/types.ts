@@ -32,6 +32,11 @@ export interface Thesis {
   headline: string;
   archetypeLabel: string;
   flag: string | null;
+  // True when generation fell back to the canned template (model error / bad
+  // JSON) instead of a real model response. Lets the API + UI tell the user and
+  // offer a retry rather than presenting a generic template as a personalized
+  // thesis. Transient — not persisted to the DB.
+  usedFallback?: boolean;
 }
 
 export type Stage = 0 | 1 | 2 | 3 | 4 | 5 | 6;
