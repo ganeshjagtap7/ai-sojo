@@ -4,5 +4,11 @@
 // back to the safe default. Shared so pages and server actions sanitize the
 // same way.
 export function safeNext(raw: string, fallback: string): string {
-  return raw.startsWith('/') && !raw.startsWith('//') ? raw : fallback;
+  // Normalize backslashes to forward slashes FIRST. Browsers (and many URL
+  // parsers) treat "\" as "/", so "/\evil.com" or "/\/evil.com" becomes a
+  // protocol-relative "//evil.com" → an open redirect that the naive
+  // `!startsWith('//')` check misses. Reject anything that is protocol-relative
+  // or absolute after normalization.
+  const s = raw.replace(/\\/g, '/');
+  return s.startsWith('/') && !s.startsWith('//') ? s : fallback;
 }

@@ -8,13 +8,18 @@ type Status = 'persisting' | 'done' | 'failed';
 
 export default function OnboardingHandoffPage() {
   const router = useRouter();
-  const ranRef = useRef(false);
+  // Track which retry "tick" we last POSTed for. A bare boolean ref couldn't
+  // re-trigger the effect on Retry (mutating a ref never re-runs a useEffect);
+  // bumping `retry` (a dep) does, while the per-tick ref still blocks React's
+  // StrictMode double-invoke from firing two POSTs for the same attempt.
+  const ranTickRef = useRef(-1);
+  const [retry, setRetry] = useState(0);
   const [status, setStatus] = useState<Status>('persisting');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (ranRef.current) return;
-    ranRef.current = true;
+    if (ranTickRef.current === retry) return;
+    ranTickRef.current = retry;
 
     let cancelled = false;
 
@@ -62,7 +67,7 @@ export default function OnboardingHandoffPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, retry]);
 
   return (
     <main style={styles.main}>
@@ -83,7 +88,7 @@ export default function OnboardingHandoffPage() {
                 type="button"
                 style={styles.button}
                 onClick={() => {
-                  ranRef.current = false;
+                  setRetry((r) => r + 1);
                   setStatus('persisting');
                   setErrorMsg(null);
                 }}

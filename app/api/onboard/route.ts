@@ -53,12 +53,19 @@ export async function POST(req: Request) {
   }
 
   // Update profile archetype if it came through. RLS lets the user touch
-  // their own row only.
+  // their own row only. Fail loudly if it doesn't stick — otherwise the
+  // archetype silently never saves while the response still reports success.
   if (archetype?.id) {
-    await supabase
+    const { error: archetypeError } = await supabase
       .from('profiles')
       .update({ archetype: archetype.id })
       .eq('id', user.id);
+    if (archetypeError) {
+      return Response.json(
+        { error: `Failed to save archetype: ${archetypeError.message}` },
+        { status: 500 },
+      );
+    }
   }
 
   // Deactivate-then-insert atomically via an RPC (see migration

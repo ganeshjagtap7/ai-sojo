@@ -80,7 +80,9 @@ const ARCHETYPE_CARD: TeachCard = {
 
 export function Stage3Converse() {
   const { state, dispatch } = useFlow();
-  const [history, setHistory] = useState<ConvoItem[]>([]);
+  // Rehydrate the transcript from flow state so it survives a stage remount
+  // (back-navigation). Falls back to empty for a fresh session.
+  const [history, setHistory] = useState<ConvoItem[]>(() => (state.convo as ConvoItem[]) ?? []);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(true);
   const [currentMode, setCurrentMode] = useState<Mode>('elicit');
@@ -95,12 +97,22 @@ export function Stage3Converse() {
 
   // Seed with the hardcoded opener. /api/chat won't accept empty messages, and
   // the opener is deterministic anyway — no reason to round-trip to the model.
+  // Skip when we rehydrated a prior transcript (don't clobber it with the opener).
   useEffect(() => {
     if (sentOpenerRef.current) return;
     sentOpenerRef.current = true;
-    setHistory([{ role: 'ai', text: OPENER_TEXT, mode: 'elicit' }]);
+    if (history.length === 0) {
+      setHistory([{ role: 'ai', text: OPENER_TEXT, mode: 'elicit' }]);
+    }
     setTyping(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist the transcript to flow state so a stage remount (back-navigation)
+  // doesn't reset the conversation — keeping the model's context intact.
+  useEffect(() => {
+    dispatch({ type: 'SET_CONVO', convo: history });
+  }, [history, dispatch]);
 
   // Auto-advance to stage 4 on confirm
   useEffect(() => {

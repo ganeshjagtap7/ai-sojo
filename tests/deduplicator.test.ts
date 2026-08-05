@@ -128,3 +128,61 @@ test('two different online businesses (no city) stay separate', () => {
   ]);
   assert.equal(out.length, 2);
 });
+
+test('broker-phone sources do NOT merge two businesses that share a broker number', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'Elegant Nails Salon', city: 'Miami', source: 'bizbuysell', phone: '305-555-7777', sourceUrl: 'https://bizbuysell.com/a/1' }),
+    lead({ businessName: "Joe's Diner", city: 'Tampa', source: 'bizbuysell', phone: '305-555-7777', sourceUrl: 'https://bizbuysell.com/a/2' }),
+  ]);
+  assert.equal(out.length, 2); // same broker phone must not collapse unrelated businesses
+});
+
+test('local-directory sources still merge on the business phone', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'ABC Cleaning', city: 'Atlanta', source: 'google_maps', phone: '404-555-1234' }),
+    lead({ businessName: 'XYZ Cleaning', city: 'Atlanta', source: 'yellowpages', phone: '404-555-1234' }),
+  ]);
+  assert.equal(out.length, 1); // same real business line → still one business
+});
+
+test('two failed-parse "Unknown" listings do NOT merge on the placeholder name', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'Unknown', city: null, source: 'flippa', sourceUrl: 'https://flippa.com/900', askingPrice: 50000, currency: 'USD' }),
+    lead({ businessName: 'Unknown', city: null, source: 'acquire', sourceUrl: 'https://app.acquire.com/startup/901', askingPrice: 999000, currency: 'USD' }),
+  ]);
+  assert.equal(out.length, 2); // 'unknown' is non-identifying — unrelated listings stay separate
+  assert.equal(out[0].askingPrice, 50000); // neither one's deal fields get clobbered
+  assert.equal(out[1].askingPrice, 999000);
+});
+
+test('real names with no city still merge (placeholder guard is name-specific)', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'CloudInvoice SaaS', city: null, source: 'flippa', sourceUrl: 'https://flippa.com/1' }),
+    lead({ businessName: 'CloudInvoice SaaS', city: null, source: 'acquire', sourceUrl: 'https://app.acquire.com/2' }),
+  ]);
+  assert.equal(out.length, 1); // genuine shared name still merges cross-marketplace
+});
+
+test('mismatched-currency merge does NOT blend monetary fields across currencies', () => {
+  // Two leads that share an identity key (same listing URL) but report different
+  // currencies. The merge keeps `existing`'s monetary set and pulls nothing
+  // money-related from the INR lead — no USD-price + INR-revenue franken-record.
+  const out = deduplicateLeads([
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/x', currency: 'USD', askingPrice: 200000, annualRevenue: null }),
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/x', currency: 'INR', askingPrice: null, annualRevenue: 5000000 }),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].currency, 'USD'); // stays the existing lead's currency
+  assert.equal(out[0].askingPrice, 200000);
+  assert.equal(out[0].annualRevenue, null); // INR revenue NOT pulled in under a USD label
+});
+
+test('same-currency merge still fills missing monetary fields', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/y', currency: 'USD', askingPrice: 200000, annualRevenue: null }),
+    lead({ businessName: 'GadgetPro', city: null, sourceUrl: 'https://example.com/y', currency: 'USD', askingPrice: null, annualRevenue: 90000 }),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].askingPrice, 200000);
+  assert.equal(out[0].annualRevenue, 90000); // same currency → still merges
+});

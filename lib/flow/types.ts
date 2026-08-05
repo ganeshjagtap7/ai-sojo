@@ -32,6 +32,11 @@ export interface Thesis {
   headline: string;
   archetypeLabel: string;
   flag: string | null;
+  // True when generation fell back to the canned template (model error / bad
+  // JSON) instead of a real model response. Lets the API + UI tell the user and
+  // offer a retry rather than presenting a generic template as a personalized
+  // thesis. Transient — not persisted to the DB.
+  usedFallback?: boolean;
 }
 
 export type Stage = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -48,6 +53,13 @@ export interface FlowState {
   thesis: Thesis | null;
   progressMode: 'auto' | 'early' | 'mid' | 'done';
   leads: RankedLead[];
+  // Stage 3 chat transcript. Persisted here (not local component state) so it
+  // survives the stage remount on back-navigation — otherwise the visible chat
+  // resets to the opener while the extracted buckets persist, and the stateless
+  // /api/chat loses all memory of the prior conversation. Typed as unknown[] to
+  // keep the component's rich ConvoItem type out of the shared flow module; the
+  // component casts it back on read.
+  convo: unknown[];
 }
 
 export const INITIAL_STATE: FlowState = {
@@ -59,11 +71,13 @@ export const INITIAL_STATE: FlowState = {
   thesis: null,
   progressMode: 'auto',
   leads: [],
+  convo: [],
 };
 
 export type FlowAction =
   | { type: 'SET_STAGE'; stage: Stage }
   | { type: 'SET_EMAIL'; email: string }
+  | { type: 'SET_CONVO'; convo: unknown[] }
   | { type: 'SET_ARCHETYPE'; archetype: Archetype }
   | { type: 'SET_FACTS'; facts: Facts }
   | { type: 'PATCH_BUCKETS'; patch: Buckets }

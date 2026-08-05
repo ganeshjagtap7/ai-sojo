@@ -20,6 +20,9 @@ export function Stage5Generate() {
   const [elapsed, setElapsed] = useState(0);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The thesis came back from the canned fallback template (model error / bad
+  // JSON) rather than a real generation — surface it so the user can retry.
+  const [usedFallback, setUsedFallback] = useState(false);
   const kickedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -38,6 +41,7 @@ export function Stage5Generate() {
 
   function generateThesis() {
     setFailed(false);
+    setUsedFallback(false);
     setThesisProgress(0);
     timerRef.current = setInterval(() => {
       setThesisProgress((p) => Math.min(p + 1, 4));
@@ -55,6 +59,7 @@ export function Stage5Generate() {
       .then((thesis) => {
         if (timerRef.current) clearInterval(timerRef.current);
         setThesisProgress(5);
+        setUsedFallback(Boolean(thesis?.usedFallback));
         dispatch({ type: 'SET_THESIS', thesis });
       })
       .catch(() => {
@@ -68,6 +73,15 @@ export function Stage5Generate() {
   useEffect(() => {
     if (kickedRef.current || progressMode !== 'auto') return;
     kickedRef.current = true;
+    // If a thesis already exists (the user reached Stage 6 then navigated back —
+    // which remounts this stage and resets kickedRef), don't silently regenerate:
+    // it would overwrite the reviewed thesis AND burn another /api/thesis quota
+    // call. Show the finished state instead.
+    if (state.thesis) {
+      setThesisProgress(5);
+      setUsedFallback(Boolean(state.thesis.usedFallback));
+      return;
+    }
     generateThesis();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -141,7 +155,15 @@ export function Stage5Generate() {
             </div>
           )}
 
-          {ready && (
+          {ready && usedFallback && (
+            <div className="s5-ready-card">
+              <div className="t">We couldn’t fully generate your thesis just now, so this is a generic draft built from your answers. Try again for a personalized version.</div>
+              <button onClick={generateThesis}>Regenerate</button>
+              <button onClick={() => dispatch({ type: 'SET_STAGE', stage: 6 })}>Use this draft →</button>
+            </div>
+          )}
+
+          {ready && !usedFallback && (
             <div className="s5-ready-card">
               <div className="t">Done. Your thesis is ready.</div>
               <button onClick={() => dispatch({ type: 'SET_STAGE', stage: 6 })}>Open the deliverable →</button>

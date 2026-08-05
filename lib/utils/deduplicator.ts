@@ -1,7 +1,59 @@
 import { RawLead } from '@/lib/types';
 import { normalizeName, normalizePhone, extractDomain, normalizeUrl } from './normalizers';
 
+// Sources whose `phone` is the BUSINESS's own line (local/niche directories) —
+// safe to use as an identity key. Marketplaces list a broker/seller
+// intermediary's number (e.g. BizBuySell's contact_phone is the broker), so two
+// unrelated businesses listed by the same broker share it. Merging on phone
+// alone would silently collapse them into one — so we only trust phone as an
+// identity signal for these sources.
+const BUSINESS_PHONE_SOURCES = new Set<RawLead['source']>([
+  'google_maps', 'web_search', 'bbb', 'yellowpages', 'manta',
+  'hvacinformed', 'esa', 'serviceexperts',
+]);
+
+// Placeholder names several scrapers emit when title extraction fails (e.g.
+// `str(item.title) || 'Unknown'`). These carry NO identity — two unrelated
+// listings that both failed to parse would share `name::unknown` and get merged
+// (one's price/revenue/URL silently dropped). So we never treat a name that
+// normalizes to one of these as an identity key; such leads still merge on a
+// real signal (listing URL / domain / business phone) but never on the name.
+const GENERIC_NAMES = new Set(['unknown', 'unknown company', 'na', 'n a', 'untitled', 'no name']);
+
 function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
+  // Monetary deal fields are only comparable within one currency. If both leads
+  // declare a currency and they DIFFER, blending them (e.g. askingPrice in USD +
+  // annualRevenue in INR under a single currency label) produces a financially
+  // misleading record. In that case keep `existing`'s monetary set untouched and
+  // pull nothing money-related from `incoming`. Non-monetary fields (address,
+  // phone, founder, forSale, etc.) are currency-independent and still merge.
+  const currencyConflict =
+    existing.currency != null &&
+    incoming.currency != null &&
+    existing.currency !== incoming.currency;
+
+  const deal = currencyConflict
+    ? {
+        mrr: existing.mrr,
+        askingPrice: existing.askingPrice,
+        revenueMultiple: existing.revenueMultiple,
+        profitMultiple: existing.profitMultiple,
+        annualRevenue: existing.annualRevenue,
+        annualProfit: existing.annualProfit,
+        currency: existing.currency,
+      }
+    : {
+        // §6: a business cross-listed on two marketplaces must not lose its
+        // price/revenue/etc. on merge — keep whichever source supplied them.
+        mrr: existing.mrr ?? incoming.mrr,
+        askingPrice: existing.askingPrice ?? incoming.askingPrice,
+        revenueMultiple: existing.revenueMultiple ?? incoming.revenueMultiple,
+        profitMultiple: existing.profitMultiple ?? incoming.profitMultiple,
+        annualRevenue: existing.annualRevenue ?? incoming.annualRevenue,
+        annualProfit: existing.annualProfit ?? incoming.annualProfit,
+        currency: existing.currency ?? incoming.currency,
+      };
+
   return {
     ...existing,
     address: existing.address ?? incoming.address,
@@ -17,15 +69,7 @@ function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
     employeeCount: existing.employeeCount ?? incoming.employeeCount,
     bbbRating: existing.bbbRating ?? incoming.bbbRating,
     bbbAccredited: existing.bbbAccredited ?? incoming.bbbAccredited,
-    // Deal fields (§6): a business cross-listed on two marketplaces must not lose
-    // its price/revenue/etc. on merge — keep whichever source supplied them.
-    mrr: existing.mrr ?? incoming.mrr,
-    askingPrice: existing.askingPrice ?? incoming.askingPrice,
-    revenueMultiple: existing.revenueMultiple ?? incoming.revenueMultiple,
-    profitMultiple: existing.profitMultiple ?? incoming.profitMultiple,
-    annualRevenue: existing.annualRevenue ?? incoming.annualRevenue,
-    annualProfit: existing.annualProfit ?? incoming.annualProfit,
-    currency: existing.currency ?? incoming.currency,
+    ...deal,
     forSale: existing.forSale ?? incoming.forSale,
     founderName: existing.founderName ?? incoming.founderName,
     foundedDate: existing.foundedDate ?? incoming.foundedDate,
@@ -49,10 +93,14 @@ function keysFor(lead: RawLead): string[] {
 
   if (urlKey) keys.push(`listing::${urlKey}`); // same listing (re-scrape/params)
   // Same name in the same city (local businesses); or same name, no city
-  // (online businesses cross-listed across marketplaces).
-  if (nameKey && lead.city) keys.push(`name::${nameKey}::${lead.city.toLowerCase()}`);
-  else if (nameKey) keys.push(`name::${nameKey}`);
-  if (phoneKey) keys.push(`phone::${phoneKey}`);
+  // (online businesses cross-listed across marketplaces). Placeholder names
+  // (GENERIC_NAMES) are non-identifying and never emit a name key.
+  const nameIsIdentifying = nameKey && !GENERIC_NAMES.has(nameKey);
+  if (nameIsIdentifying && lead.city) keys.push(`name::${nameKey}::${lead.city.toLowerCase()}`);
+  else if (nameIsIdentifying) keys.push(`name::${nameKey}`);
+  // Only trust phone as an identity key for sources where it's the business's
+  // own line — not marketplaces/brokers (see BUSINESS_PHONE_SOURCES).
+  if (phoneKey && BUSINESS_PHONE_SOURCES.has(lead.source)) keys.push(`phone::${phoneKey}`);
   if (domainKey) keys.push(`domain::${domainKey}`);
   return keys;
 }

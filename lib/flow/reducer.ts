@@ -8,6 +8,8 @@ export function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, stage: clampStage(action.stage) };
     case 'SET_EMAIL':
       return { ...state, email: action.email };
+    case 'SET_CONVO':
+      return { ...state, convo: action.convo };
     case 'SET_ARCHETYPE':
       return { ...state, archetype: action.archetype };
     case 'SET_FACTS':
