@@ -68,6 +68,14 @@ export function Stage5Generate() {
   useEffect(() => {
     if (kickedRef.current || progressMode !== 'auto') return;
     kickedRef.current = true;
+    // If a thesis already exists (the user reached Stage 6 then navigated back —
+    // which remounts this stage and resets kickedRef), don't silently regenerate:
+    // it would overwrite the reviewed thesis AND burn another /api/thesis quota
+    // call. Show the finished state instead.
+    if (state.thesis) {
+      setThesisProgress(5);
+      return;
+    }
     generateThesis();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
