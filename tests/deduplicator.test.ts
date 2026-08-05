@@ -144,3 +144,21 @@ test('local-directory sources still merge on the business phone', () => {
   ]);
   assert.equal(out.length, 1); // same real business line → still one business
 });
+
+test('two failed-parse "Unknown" listings do NOT merge on the placeholder name', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'Unknown', city: null, source: 'flippa', sourceUrl: 'https://flippa.com/900', askingPrice: 50000, currency: 'USD' }),
+    lead({ businessName: 'Unknown', city: null, source: 'acquire', sourceUrl: 'https://app.acquire.com/startup/901', askingPrice: 999000, currency: 'USD' }),
+  ]);
+  assert.equal(out.length, 2); // 'unknown' is non-identifying — unrelated listings stay separate
+  assert.equal(out[0].askingPrice, 50000); // neither one's deal fields get clobbered
+  assert.equal(out[1].askingPrice, 999000);
+});
+
+test('real names with no city still merge (placeholder guard is name-specific)', () => {
+  const out = deduplicateLeads([
+    lead({ businessName: 'CloudInvoice SaaS', city: null, source: 'flippa', sourceUrl: 'https://flippa.com/1' }),
+    lead({ businessName: 'CloudInvoice SaaS', city: null, source: 'acquire', sourceUrl: 'https://app.acquire.com/2' }),
+  ]);
+  assert.equal(out.length, 1); // genuine shared name still merges cross-marketplace
+});

@@ -12,6 +12,14 @@ const BUSINESS_PHONE_SOURCES = new Set<RawLead['source']>([
   'hvacinformed', 'esa', 'serviceexperts',
 ]);
 
+// Placeholder names several scrapers emit when title extraction fails (e.g.
+// `str(item.title) || 'Unknown'`). These carry NO identity — two unrelated
+// listings that both failed to parse would share `name::unknown` and get merged
+// (one's price/revenue/URL silently dropped). So we never treat a name that
+// normalizes to one of these as an identity key; such leads still merge on a
+// real signal (listing URL / domain / business phone) but never on the name.
+const GENERIC_NAMES = new Set(['unknown', 'unknown company', 'na', 'n a', 'untitled', 'no name']);
+
 function mergeLeads(existing: RawLead, incoming: RawLead): RawLead {
   return {
     ...existing,
@@ -60,9 +68,11 @@ function keysFor(lead: RawLead): string[] {
 
   if (urlKey) keys.push(`listing::${urlKey}`); // same listing (re-scrape/params)
   // Same name in the same city (local businesses); or same name, no city
-  // (online businesses cross-listed across marketplaces).
-  if (nameKey && lead.city) keys.push(`name::${nameKey}::${lead.city.toLowerCase()}`);
-  else if (nameKey) keys.push(`name::${nameKey}`);
+  // (online businesses cross-listed across marketplaces). Placeholder names
+  // (GENERIC_NAMES) are non-identifying and never emit a name key.
+  const nameIsIdentifying = nameKey && !GENERIC_NAMES.has(nameKey);
+  if (nameIsIdentifying && lead.city) keys.push(`name::${nameKey}::${lead.city.toLowerCase()}`);
+  else if (nameIsIdentifying) keys.push(`name::${nameKey}`);
   // Only trust phone as an identity key for sources where it's the business's
   // own line — not marketplaces/brokers (see BUSINESS_PHONE_SOURCES).
   if (phoneKey && BUSINESS_PHONE_SOURCES.has(lead.source)) keys.push(`phone::${phoneKey}`);
