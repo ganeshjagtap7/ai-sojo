@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
-// Only allow relative redirects to defend against open-redirect via the `next`
-// query param. If the value isn't a clean relative path, fall through to the
-// safe default.
-function safeNext(raw: string | null): string {
-  if (!raw) return '/app/onboarding';
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/app/onboarding';
-  return raw;
-}
+import { safeNext } from '@/lib/safeNext';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = safeNext(searchParams.get('next'));
+  // Shared guard (lib/safeNext) — fixes the open-redirect and keeps every auth
+  // redirect flow sanitizing the same way, so a future fix lands in one place.
+  const next = safeNext(searchParams.get('next') ?? '/app/onboarding', '/app/onboarding');
   const errorDescription = searchParams.get('error_description');
 
   if (errorDescription) {
