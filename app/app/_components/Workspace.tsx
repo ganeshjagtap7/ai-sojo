@@ -184,19 +184,36 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
       if (!result) throw new Error('Search ended without a result.');
       const json = result;
 
-      const persistRes = await fetch('/api/app/searches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thesisId: thesis.id,
-          query: input.query,
-          leads: json.leads,
-          metadata: json.metadata,
-          status: 'complete',
-        }),
+      // One idempotency key per search attempt. If the persist response is lost
+      // after the server committed (timeout / dropped connection), we retry with
+      // the SAME key so the server dedupes instead of creating a duplicate row.
+      const idempotencyKey = crypto.randomUUID();
+      const persistBody = JSON.stringify({
+        idempotencyKey,
+        thesisId: thesis.id,
+        query: input.query,
+        leads: json.leads,
+        metadata: json.metadata,
+        status: 'complete',
       });
-      const persistJson = await persistRes.json();
-      if (!persistRes.ok || !persistJson.searchId) throw new Error(persistJson.error ?? 'Failed to persist search');
+      let persistJson: { searchId?: string; error?: string } = {};
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const persistRes = await fetch('/api/app/searches', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: persistBody,
+          });
+          persistJson = await persistRes.json().catch(() => ({}));
+          if (!persistRes.ok || !persistJson.searchId) throw new Error(persistJson.error ?? 'Failed to persist search');
+          break;
+        } catch (err) {
+          // Only a network drop/timeout (TypeError) is worth retrying — a real
+          // HTTP error response won't change. Reuse the key so the retry can't
+          // duplicate the row the server may have already committed.
+          if (!(err instanceof TypeError) || attempt >= 2) throw err;
+        }
+      }
 
       router.replace(`/app?search=${persistJson.searchId}`);
       router.refresh();
