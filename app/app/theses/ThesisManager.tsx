@@ -54,7 +54,14 @@ export function ThesisManager({ initial }: { initial: ThesisRow[] }) {
     setError(null);
     try {
       // Deactivate the current thesis, then send the user through the wizard.
-      await fetch('/api/app/redo-thesis', { method: 'POST' });
+      // Check the response: a 500 isn't a thrown error, and proceeding would
+      // wipe the draft and navigate to / while the old thesis is still active —
+      // which just bounces back to /app, looking like the button did nothing.
+      const res = await fetch('/api/app/redo-thesis', { method: 'POST' });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? `HTTP ${res.status}`);
+      }
       // Reset the wizard's client state too — otherwise the old draft in
       // localStorage resumes at Stage 6 instead of a fresh Stage-0 start.
       try {

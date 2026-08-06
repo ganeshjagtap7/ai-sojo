@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { loginWithPassword } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 import { safeNext } from '@/lib/safeNext';
+import { PasswordField } from '@/app/_components/auth/PasswordField';
 
 export default async function LoginPage({
   searchParams,
@@ -46,17 +47,13 @@ export default async function LoginPage({
               placeholder="you@example.com"
             />
           </label>
-          <label style={styles.label}>
-            Password
-            <input
-              type="password"
-              name="password"
-              required
-              autoComplete="current-password"
-              style={styles.input}
-              placeholder="••••••••"
-            />
-          </label>
+          <PasswordField
+            name="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            labelStyle={styles.label}
+            inputStyle={styles.input}
+          />
           <button type="submit" style={styles.button}>
             Sign in
           </button>

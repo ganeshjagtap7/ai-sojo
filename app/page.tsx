@@ -12,7 +12,15 @@ export const preferredRegion = 'bom1';
  * with an active thesis belongs in their workspace, not on the marketing
  * landing — bounce them.
  */
-export default async function Page() {
+const NOTICES: Record<string, string> = {
+  'finish-onboarding': 'Finish setting up your thesis to open your workspace.',
+};
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
@@ -25,5 +33,6 @@ export default async function Page() {
       .maybeSingle();
     if (active) redirect('/app');
   }
-  return <WizardPage />;
+  const { notice } = await searchParams;
+  return <WizardPage notice={notice ? NOTICES[notice] : undefined} />;
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { RankedLead } from '@/lib/types';
 import { tierOf, locLine } from '@/app/app/_lib/leadScoring';
 import { LeadDrawer } from './LeadDrawer';
+import { ToastStack, useToasts } from './ToastStack';
 
 const STAGES = ['New', 'Outreach', 'Discovery', 'LOI sent', 'Passed'] as const;
 type Stage = (typeof STAGES)[number];
@@ -47,6 +48,7 @@ function TimeAgo({ iso, ago }: { iso: string; ago?: boolean }) {
 
 export function SavedView({ rows }: { rows: SavedRow[] }) {
   const router = useRouter();
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts();
   const [drawerLead, setDrawerLead] = useState<RankedLead | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -59,10 +61,15 @@ export function SavedView({ rows }: { rows: SavedRow[] }) {
   // removes it. Close the drawer and refresh the list on success.
   const removeFromDrawer = async () => {
     if (!drawerLead) return;
-    const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(drawerLead.id)}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(drawerLead.id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
       setDrawerOpen(false);
       router.refresh();
+    } catch {
+      // Don't fail silently — the drawer just staying open looks like nothing
+      // happened. Tell the user so they can retry.
+      pushToast("Couldn't remove", 'Please try again');
     }
   };
 
@@ -114,6 +121,8 @@ export function SavedView({ rows }: { rows: SavedRow[] }) {
         isSaved
         onSave={removeFromDrawer}
       />
+
+      <ToastStack toasts={toasts} dismiss={dismissToast} />
     </div>
   );
 }
