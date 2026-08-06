@@ -28,7 +28,14 @@ export function Shell({ children }: { children: ReactNode }) {
   const { stage, archetype } = state;
 
   const go = (n: number) => dispatch({ type: 'SET_STAGE', stage: Math.max(0, Math.min(6, n)) as 0 | 1 | 2 | 3 | 4 | 5 | 6 });
-  const restart = () => dispatch({ type: 'RESTART' });
+  // Confirm before wiping — Restart is styled like the other nav links, so a
+  // misclick deep in the flow would otherwise erase archetype, facts, the
+  // conversation, and any generated thesis with no undo.
+  const restart = () => {
+    if (window.confirm('This will erase your progress — your answers, conversation, and any generated thesis. Continue?')) {
+      dispatch({ type: 'RESTART' });
+    }
+  };
 
   return (
     <div className="shell" data-screen-label={STAGES[stage].label}>
