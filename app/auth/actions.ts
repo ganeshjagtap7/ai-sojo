@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { safeNext } from '@/lib/safeNext';
+import { friendlyAuthError } from '@/lib/errors/authError';
 
 // Email + password sign-in. Consistent with the wizard's auth gate; magic links
 // were dropped so there's a single auth method across the app.
@@ -19,7 +20,8 @@ export async function loginWithPassword(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
+    const friendly = friendlyAuthError(error.message, 'login');
+    redirect(`/login?error=${encodeURIComponent(friendly)}&next=${encodeURIComponent(next)}`);
   }
   redirect(next);
 }
@@ -38,7 +40,8 @@ export async function signupWithPassword(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({ email, password });
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
+    const friendly = friendlyAuthError(error.message, 'signup');
+    redirect(`/signup?error=${encodeURIComponent(friendly)}&next=${encodeURIComponent(next)}`);
   }
   redirect(next);
 }
