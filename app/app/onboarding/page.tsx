@@ -83,6 +83,7 @@ export default function OnboardingHandoffPage() {
           <>
             <h1 style={styles.heading}>Something went wrong</h1>
             <p style={styles.error}>{errorMsg ?? 'Please try again.'}</p>
+            <p style={styles.sub}>Your thesis wasn&apos;t saved. Retry, or leave — your progress is kept so you can finish later.</p>
             <div style={styles.actions}>
               <button
                 type="button"
@@ -95,14 +96,16 @@ export default function OnboardingHandoffPage() {
               >
                 Retry
               </button>
-              {/* Safe exit — don't strand the user re-looping the failing save.
-                  The app handles a missing/empty thesis with its own prompt. */}
+              {/* Safe exit that's honest about the state: the save failed, so
+                  nothing was persisted. Don't say "Continue to app" (there's no
+                  saved thesis to open) — send them back to the wizard, where
+                  their in-progress draft is preserved so they can try again. */}
               <button
                 type="button"
                 style={styles.buttonSecondary}
-                onClick={() => router.replace('/app')}
+                onClick={() => router.replace('/')}
               >
-                Continue to app
+                Leave without saving
               </button>
             </div>
           </>
