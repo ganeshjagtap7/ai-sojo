@@ -47,7 +47,9 @@ export default async function AppHomePage({
     .maybeSingle<Omit<ThesisRow, 'archetype_id'>>();
 
   if (!thesis) {
-    redirect('/');
+    // Carry a notice so the wizard can explain the bounce — otherwise clicking
+    // "Workspace" with no active thesis silently loops back here with no signal.
+    redirect('/?notice=finish-onboarding');
   }
 
   const { data: profile } = await supabase

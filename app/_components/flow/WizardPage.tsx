@@ -40,11 +40,30 @@ function StageRouter() {
   }
 }
 
-export function WizardPage() {
+export function WizardPage({ notice }: { notice?: string }) {
   return (
     <AuthProvider>
       <FlowProvider>
         <Shell>
+          {notice && (
+            <div
+              role="status"
+              style={{
+                margin: '0 auto 20px',
+                maxWidth: 640,
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: '1px solid #fde68a',
+                background: '#fffbeb',
+                color: '#92400e',
+                fontFamily: 'var(--sans)',
+                fontSize: 13,
+                textAlign: 'center',
+              }}
+            >
+              {notice}
+            </div>
+          )}
           <StageRouter />
         </Shell>
         <TweaksPanel />
