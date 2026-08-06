@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { friendlyAuthError } from '@/lib/errors/authError';
 
 type Mode = 'signup' | 'signin';
 
@@ -55,7 +56,10 @@ export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
         router.refresh();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      // Friendly copy (consistent with the /login and /signup pages) instead of
+      // raw Supabase strings like "Invalid login credentials" / "fetch failed".
+      const raw = err instanceof Error ? err.message : 'Something went wrong';
+      setError(friendlyAuthError(raw, mode === 'signup' ? 'signup' : 'login'));
     } finally {
       setSubmitting(false);
     }
