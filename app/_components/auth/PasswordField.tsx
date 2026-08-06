@@ -7,16 +7,25 @@ import { useState } from 'react';
 // bullet placeholder ("••••••••") made an EMPTY field look pre-filled.
 export function PasswordField({
   name,
+  value,
+  onChange,
   autoComplete,
   minLength,
   placeholder,
+  autoFocus,
   labelStyle,
   inputStyle,
 }: {
-  name: string;
+  // Uncontrolled (form-action pages) pass `name`; controlled callers (the
+  // in-wizard gate) pass `value` + `onChange`. Supporting both keeps the eye
+  // toggle in one place instead of duplicating it per form.
+  name?: string;
+  value?: string;
+  onChange?: (value: string) => void;
   autoComplete: string;
   minLength?: number;
   placeholder?: string;
+  autoFocus?: boolean;
   labelStyle?: React.CSSProperties;
   inputStyle?: React.CSSProperties;
 }) {
@@ -29,10 +38,13 @@ export function PasswordField({
         <input
           type={show ? 'text' : 'password'}
           name={name}
+          value={value}
+          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
           required
           minLength={minLength}
           autoComplete={autoComplete}
           placeholder={placeholder}
+          autoFocus={autoFocus}
           style={{ ...inputStyle, width: '100%', paddingRight: 40 }}
         />
         <button

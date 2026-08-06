@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { friendlyAuthError } from '@/lib/errors/authError';
+import { PasswordField } from './PasswordField';
 
 type Mode = 'signup' | 'signin';
 
@@ -89,18 +90,14 @@ export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
                 style={formStyles.input}
               />
             </label>
-            <label style={formStyles.label}>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                style={formStyles.input}
-              />
-            </label>
+            <PasswordField
+              value={password}
+              onChange={setPassword}
+              minLength={6}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              labelStyle={formStyles.label}
+              inputStyle={formStyles.input}
+            />
 
             {message && <p style={formStyles.info}>{message}</p>}
             {error && <p style={formStyles.error}>{error}</p>}

@@ -43,7 +43,8 @@ export function ThesisManager({ initial }: { initial: ThesisRow[] }) {
       setTheses((prev) => prev.map((t) => ({ ...t, is_active: t.id === id })));
       router.push('/app'); // land in the workspace with the newly-active thesis
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not switch thesis');
+      console.error('[theses] switch failed:', err);
+      setError('Could not switch thesis — please try again.');
       setBusy(null);
     }
   }
@@ -71,7 +72,8 @@ export function ThesisManager({ initial }: { initial: ThesisRow[] }) {
       }
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not start a new thesis');
+      console.error('[theses] new thesis failed:', err);
+      setError('Could not start a new thesis — please try again.');
       setBusy(null);
     }
   }
