@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useFlow, LS_KEY } from './FlowProvider';
 import { useAuth } from '../auth/AuthProvider';
+import { friendlyActionError } from '@/lib/errors/actionError';
 
 export function Stage6Deliver() {
   const { state, dispatch } = useFlow();
@@ -28,7 +29,13 @@ export function Stage6Deliver() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error ?? `HTTP ${res.status}`);
+        // 4xx copy from the server is user-actionable; 5xx/unknown get a calm
+        // generic rather than a raw "HTTP 500".
+        const friendly =
+          res.status >= 400 && res.status < 500 && j.error
+            ? j.error
+            : "We couldn't save your thesis right now. Please try again.";
+        throw new Error(friendly);
       }
       try {
         localStorage.removeItem(LS_KEY);
@@ -37,7 +44,7 @@ export function Stage6Deliver() {
       }
       window.location.href = '/app';
     } catch (err) {
-      setPersistError(err instanceof Error ? err.message : 'Failed to save');
+      setPersistError(friendlyActionError(err, "We couldn't save your thesis right now. Please try again."));
       setPersisting(false);
     }
   };

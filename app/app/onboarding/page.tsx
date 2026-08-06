@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LS_KEY } from '@/app/_components/flow/FlowProvider';
+import { friendlyActionError } from '@/lib/errors/actionError';
 
 type Status = 'persisting' | 'done' | 'failed';
 
@@ -40,7 +41,14 @@ export default function OnboardingHandoffPage() {
         });
         const j = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(j?.error ?? `HTTP ${res.status}`);
+          // 4xx carry user-actionable copy from the server (e.g. the
+          // "answers didn't come through" prompt); 5xx/unknown get a calm
+          // generic instead of a raw "HTTP 500".
+          const friendly =
+            res.status >= 400 && res.status < 500 && j?.error
+              ? j.error
+              : "We couldn't save your thesis right now. Please try again.";
+          throw new Error(friendly);
         }
         // Clear localStorage ONLY when a thesis was actually persisted. A no-op
         // response (persisted: false — e.g. the user reached here before finishing
@@ -59,7 +67,7 @@ export default function OnboardingHandoffPage() {
       } catch (err) {
         if (!cancelled) {
           setStatus('failed');
-          setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+          setErrorMsg(friendlyActionError(err, "We couldn't save your thesis right now. Please try again."));
         }
       }
     })();
