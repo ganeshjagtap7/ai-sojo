@@ -111,10 +111,17 @@ export function Workspace({ thesis, searches, activeSearch, savedLeadIds: initia
 
   async function onRebuildThesis() {
     try {
-      await fetch('/api/app/redo-thesis', { method: 'POST' });
+      const res = await fetch('/api/app/redo-thesis', { method: 'POST' });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? 'Failed to start a rebuild');
+      }
     } catch {
-      // Even if deactivation fails, send them to the wizard — a new save
-      // deactivates the old thesis anyway.
+      // If deactivation failed, the thesis is still active — navigating to /
+      // would just bounce back here, looking like the click did nothing. Show
+      // an error and stay put instead.
+      pushToast("Couldn't start rebuild", 'Something went wrong — please try again.');
+      return;
     }
     window.location.href = '/';
   }
