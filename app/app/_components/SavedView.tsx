@@ -6,6 +6,7 @@ import type { RankedLead } from '@/lib/types';
 import { tierOf, locLine } from '@/app/app/_lib/leadScoring';
 import { LeadDrawer } from './LeadDrawer';
 import { ToastStack, useToasts } from './ToastStack';
+import { friendlyActionError } from '@/lib/errors/actionError';
 
 const STAGES = ['New', 'Outreach', 'Discovery', 'LOI sent', 'Passed'] as const;
 type Stage = (typeof STAGES)[number];
@@ -136,25 +137,30 @@ function SavedRowEl({ row, onOpen }: { row: SavedRow; onOpen: (lead: RankedLead)
   const updateStage = (next: Stage) => {
     setError(null);
     startTransition(async () => {
-      const res = await fetch('/api/app/saved', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId: row.lead.id, stage: next }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setError(j.error ?? 'Update failed');
-        return;
+      try {
+        const res = await fetch('/api/app/saved', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leadId: row.lead.id, stage: next }),
+        });
+        if (!res.ok) throw new Error('Could not update stage — please try again.');
+        router.refresh();
+      } catch (err) {
+        setError(friendlyActionError(err, 'Could not update stage — please try again.'));
       }
-      router.refresh();
     });
   };
 
   const unsave = () => {
+    setError(null);
     startTransition(async () => {
-      const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(row.lead.id)}`, { method: 'DELETE' });
-      if (res.ok) router.refresh();
-      else setError('Unsave failed');
+      try {
+        const res = await fetch(`/api/app/saved?leadId=${encodeURIComponent(row.lead.id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Could not remove this lead — please try again.');
+        router.refresh();
+      } catch (err) {
+        setError(friendlyActionError(err, 'Could not remove this lead — please try again.'));
+      }
     });
   };
 

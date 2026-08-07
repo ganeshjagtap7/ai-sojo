@@ -53,6 +53,18 @@ export async function POST(req: Request) {
     .single();
 
   if (error || !data) {
+    // A unique-violation means a concurrent request already saved this lead
+    // (the check-then-insert race). Treat it as an idempotent success: fetch
+    // the row the winner inserted and return it, rather than a 500.
+    if (error?.code === '23505') {
+      const { data: dup } = await supabase
+        .from('saved_leads')
+        .select('id')
+        .eq('user_id', user.id)
+        .filter('lead->>id', 'eq', lead.id)
+        .maybeSingle();
+      if (dup) return Response.json({ ok: true, deduped: true, id: dup.id });
+    }
     return Response.json({ error: error?.message ?? 'Save failed' }, { status: 500 });
   }
   return Response.json({ ok: true, id: data.id }, { status: 201 });
@@ -75,7 +87,10 @@ export async function PATCH(req: Request) {
     .eq('user_id', user.id)
     .filter('lead->>id', 'eq', parsed.data.leadId);
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[saved] stage update failed:', error);
+    return Response.json({ error: 'Could not update the saved lead.' }, { status: 500 });
+  }
   return Response.json({ ok: true });
 }
 
@@ -94,6 +109,9 @@ export async function DELETE(req: Request) {
     .eq('user_id', user.id)
     .filter('lead->>id', 'eq', leadId);
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[saved] delete failed:', error);
+    return Response.json({ error: 'Could not remove the saved lead.' }, { status: 500 });
+  }
   return Response.json({ ok: true });
 }

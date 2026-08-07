@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { nanoid } from 'nanoid';
-import { getAIProvider } from './provider';
+import { getAIProvider, AI_CALL_TIMEOUT_MS } from './provider';
 import { chunkArray } from '@/lib/utils/chunk';
 import { RawLead, EnrichedLead, SearchCriteria } from '@/lib/types';
 
@@ -80,24 +80,25 @@ export async function enrichLeads(
   deadlineMs: number = Number.POSITIVE_INFINITY,
 ): Promise<EnrichedLead[]> {
   const BATCH_SIZE = 15;
+  // Run a few batches at once instead of strictly one-at-a-time — enrichment on
+  // a large search was needlessly serial. The deadline check below still bounds
+  // total time, and per-batch isolation still degrades gracefully.
+  const CONCURRENCY = 3;
   const batches = chunkArray(leads, BATCH_SIZE);
   const results: EnrichedLead[] = [];
 
-  for (let bi = 0; bi < batches.length; bi++) {
-    if (Date.now() > deadlineMs) {
-      console.warn(`[Enricher] pipeline budget reached — emitting ${batches.length - bi} remaining batches un-enriched`);
-      for (let j = bi; j < batches.length; j++) results.push(...mergeBatch(batches[j], []));
-      break;
-    }
-    const batch = batches[bi];
-    // Per-batch isolation: a failed batch (malformed model JSON → schema error,
-    // provider 429/timeout) must NOT discard the batches already enriched. On
-    // failure we emit the batch's leads un-enriched so no scraped work is lost.
+  // Per-batch isolation: a failed batch (malformed model JSON → schema error,
+  // provider 429/timeout) must NOT discard other batches. On failure we return
+  // no enrichments so mergeBatch emits the batch un-enriched — no work lost.
+  const enrichOneBatch = async (batch: RawLead[]): Promise<EnrichedLead[]> => {
     let enrichments: EnrichmentRow[] = [];
     try {
       const { object } = await generateObject({
         model: getAIProvider('enrich'),
         schema: EnrichmentSchema,
+        // Bound each model call so a stalled provider can't hang the pipeline;
+        // a timeout throws here and the batch is emitted un-enriched (below).
+        abortSignal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
         prompt: `Enrich these businesses (industry context: ${criteria.industry.primary} in ${criteria.location.city}, ${criteria.location.state}):
 
 ${JSON.stringify(batch.map((l, i) => ({
@@ -122,10 +123,23 @@ ${JSON.stringify(batch.map((l, i) => ({
     } catch (err) {
       console.error('[Enricher] batch failed — emitting un-enriched leads:', err);
     }
-
     // mergeBatch is bounds-safe: an out-of-range model index is ignored instead
     // of crashing the whole search (the original 500-loses-everything bug).
-    results.push(...mergeBatch(batch, enrichments));
+    return mergeBatch(batch, enrichments);
+  };
+
+  // Process in waves of CONCURRENCY. Result order is preserved (waves run in
+  // order; Promise.all preserves within-wave order), which downstream ranking
+  // relies on. The deadline is checked once per wave.
+  for (let start = 0; start < batches.length; start += CONCURRENCY) {
+    if (Date.now() > deadlineMs) {
+      console.warn(`[Enricher] pipeline budget reached — emitting ${batches.length - start} remaining batches un-enriched`);
+      for (let j = start; j < batches.length; j++) results.push(...mergeBatch(batches[j], []));
+      break;
+    }
+    const wave = batches.slice(start, start + CONCURRENCY);
+    const waveResults = await Promise.all(wave.map(enrichOneBatch));
+    for (const r of waveResults) results.push(...r);
   }
 
   return results;

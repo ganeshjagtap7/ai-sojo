@@ -8,6 +8,7 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { fetchWithTimeout } from './fetchWithTimeout';
 import { RawLead, SearchCriteria } from '@/lib/types';
 
 const BASE = 'https://xe1r-a1ss-4juk.n7c.xano.io/api:h-Y0UDzT:v.1.5';
@@ -23,7 +24,7 @@ function getToken(): string {
 }
 
 async function api<T = unknown>(path: string, token: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetchWithTimeout(`${BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} on ${path}`);
   return res.json() as Promise<T>;
 }
