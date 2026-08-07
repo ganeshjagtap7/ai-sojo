@@ -87,7 +87,10 @@ export async function PATCH(req: Request) {
     .eq('user_id', user.id)
     .filter('lead->>id', 'eq', parsed.data.leadId);
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[saved] stage update failed:', error);
+    return Response.json({ error: 'Could not update the saved lead.' }, { status: 500 });
+  }
   return Response.json({ ok: true });
 }
 
@@ -106,6 +109,9 @@ export async function DELETE(req: Request) {
     .eq('user_id', user.id)
     .filter('lead->>id', 'eq', leadId);
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[saved] delete failed:', error);
+    return Response.json({ error: 'Could not remove the saved lead.' }, { status: 500 });
+  }
   return Response.json({ ok: true });
 }
