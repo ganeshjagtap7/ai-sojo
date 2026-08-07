@@ -53,6 +53,18 @@ export async function POST(req: Request) {
     .single();
 
   if (error || !data) {
+    // A unique-violation means a concurrent request already saved this lead
+    // (the check-then-insert race). Treat it as an idempotent success: fetch
+    // the row the winner inserted and return it, rather than a 500.
+    if (error?.code === '23505') {
+      const { data: dup } = await supabase
+        .from('saved_leads')
+        .select('id')
+        .eq('user_id', user.id)
+        .filter('lead->>id', 'eq', lead.id)
+        .maybeSingle();
+      if (dup) return Response.json({ ok: true, deduped: true, id: dup.id });
+    }
     return Response.json({ error: error?.message ?? 'Save failed' }, { status: 500 });
   }
   return Response.json({ ok: true, id: data.id }, { status: 201 });
