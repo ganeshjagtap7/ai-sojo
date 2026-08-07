@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { nanoid } from 'nanoid';
-import { getAIProvider } from './provider';
+import { getAIProvider, AI_CALL_TIMEOUT_MS } from './provider';
 import { chunkArray } from '@/lib/utils/chunk';
 import { RawLead, EnrichedLead, SearchCriteria } from '@/lib/types';
 
@@ -96,6 +96,9 @@ export async function enrichLeads(
       const { object } = await generateObject({
         model: getAIProvider('enrich'),
         schema: EnrichmentSchema,
+        // Bound each model call so a stalled provider can't hang the pipeline;
+        // a timeout throws here and the batch is emitted un-enriched (below).
+        abortSignal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
         prompt: `Enrich these businesses (industry context: ${criteria.industry.primary} in ${criteria.location.city}, ${criteria.location.state}):
 
 ${JSON.stringify(batch.map((l, i) => ({

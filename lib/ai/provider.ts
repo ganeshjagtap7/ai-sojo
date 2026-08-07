@@ -33,3 +33,9 @@ export function getAIProvider(step?: AIStep) {
   });
   return openai(model);
 }
+
+// Hard per-call timeout for model requests (via AbortSignal.timeout). A stalled
+// provider must not hang the search pipeline unbounded and breach the route's
+// maxDuration — a timed-out call is treated as that call's failure and degrades
+// gracefully (un-enriched / un-ranked / fallback queries) by its caller.
+export const AI_CALL_TIMEOUT_MS = 60_000;

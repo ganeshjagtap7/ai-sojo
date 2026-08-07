@@ -2,7 +2,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { getAIProvider } from './provider';
+import { getAIProvider, AI_CALL_TIMEOUT_MS } from './provider';
 import { chunkArray } from '@/lib/utils/chunk';
 import { EnrichedLead, RankedLead, SearchCriteria } from '@/lib/types';
 
@@ -131,6 +131,9 @@ async function rankBatch(batch: EnrichedLead[], criteria: SearchCriteria, thesis
   const { object } = await generateObject({
     model: getAIProvider('rank'),
     schema: RankingSchema,
+    // Bound the call — a timeout rejects this batch, which allSettled surfaces
+    // un-ranked (neutral score) without touching the others.
+    abortSignal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
     prompt: buildRankerPrompt(batch, criteria, thesisNotes),
     system: rankerPrompt,
   });
