@@ -58,24 +58,42 @@ export default async function AppHomePage({
     .eq('id', user.id)
     .maybeSingle<{ archetype: string | null }>();
 
-  // All search threads for this user+thesis (for sidebar tabs).
+  // All search threads for this user+thesis (for sidebar tabs). The sidebar
+  // only needs light metadata — the heavy `leads` jsonb is fetched for the ONE
+  // active search below, not every row in the user's history on every load.
+  // (Switching tabs navigates to ?search=<id>, which re-runs this loader.)
   const { data: searches } = await supabase
     .from('searches')
-    .select('id, query, leads, status, created_at, search_metadata')
+    .select('id, query, status, created_at, search_metadata')
     .eq('user_id', user.id)
     .eq('thesis_id', thesis.id)
     .order('created_at', { ascending: false })
-    .returns<SearchRow[]>();
+    .returns<Omit<SearchRow, 'leads'>[]>();
 
-  const allSearches = searches ?? [];
+  const searchList = searches ?? [];
 
   // Pick the active tab: ?search=<id> if valid, else most recent, else null.
   // An unknown ?search= id (deep link to another thesis's search, stale URL)
   // must not blank the pane — fall back to the most recent search.
-  const activeSearch =
-    (requestedSearchId ? allSearches.find((s) => s.id === requestedSearchId) : undefined) ??
-    allSearches[0] ??
+  const activeMeta =
+    (requestedSearchId ? searchList.find((s) => s.id === requestedSearchId) : undefined) ??
+    searchList[0] ??
     null;
+
+  // Fetch the full `leads` only for the active search.
+  let activeSearch: SearchRow | null = null;
+  if (activeMeta) {
+    const { data: full } = await supabase
+      .from('searches')
+      .select('leads')
+      .eq('id', activeMeta.id)
+      .eq('user_id', user.id)
+      .maybeSingle<{ leads: RankedLead[] | null }>();
+    activeSearch = { ...activeMeta, leads: full?.leads ?? null };
+  }
+
+  // Sidebar rows carry no leads (they don't render them — see note above).
+  const allSearches: SearchRow[] = searchList.map((s) => ({ ...s, leads: null }));
 
   // Saved lead IDs (used to render the Save button initial state).
   const { data: savedRows } = await supabase
