@@ -23,6 +23,8 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
+    // Validation failed before any search ran — refund the slot we just took.
+    await refundRateLimit(user.id, 'search');
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
       buckets: body.buckets,
     });
   } else {
+    await refundRateLimit(user.id, 'search');
     return Response.json({ error: 'Missing criteria or buckets+facts' }, { status: 400 });
   }
 
@@ -60,6 +63,7 @@ export async function POST(req: Request) {
   // on country, not city.
   const loc = criteria.location;
   if (!criteria.industry?.primary || (!loc?.city && isUSCountry(loc?.country))) {
+    await refundRateLimit(user.id, 'search');
     return Response.json(
       { error: isUSCountry(loc?.country) ? 'City and industry are required' : 'Industry is required' },
       { status: 400 },
