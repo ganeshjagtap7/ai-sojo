@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { fetchWithTimeout } from './fetchWithTimeout';
 import { RawLead, SearchCriteria } from '@/lib/types';
 
 const BASE = 'https://mergerdomo.com';
@@ -162,7 +163,7 @@ function parseDetail(html: string): Detail {
 
 async function fetchHtml(url: string, cookie: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { headers: { Cookie: cookie, 'User-Agent': UA, Accept: 'text/html' } });
+    const res = await fetchWithTimeout(url, { headers: { Cookie: cookie, 'User-Agent': UA, Accept: 'text/html' } });
     if (!res.ok) return null;
     return await res.text();
   } catch {
