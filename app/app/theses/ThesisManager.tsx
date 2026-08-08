@@ -79,7 +79,7 @@ export function ThesisManager({ initial }: { initial: ThesisRow[] }) {
   }
 
   return (
-    <div style={styles.wrap}>
+    <div className="theses-wrap" style={styles.wrap}>
       <div style={styles.topRow}>
         <button type="button" className="btn-primary" onClick={newThesis} disabled={busy !== null}>
           {busy === 'new' ? 'Starting…' : '+ New thesis'}
@@ -122,7 +122,7 @@ export function ThesisManager({ initial }: { initial: ThesisRow[] }) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { padding: '20px 32px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' },
+  wrap: { display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' },
   topRow: { display: 'flex', justifyContent: 'flex-end' },
   error: { fontSize: 13, color: 'var(--danger)', margin: 0 },
   empty: { fontSize: 14, color: 'var(--muted)' },

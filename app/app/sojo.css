@@ -528,6 +528,30 @@
   .sojo .simple-head h1 { font-size: 26px; }
 }
 
+/* History rows + Theses list — moved off inline styles so they adapt. */
+.sojo .history-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 20px;
+  align-items: center;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--hairline);
+  text-decoration: none;
+  color: inherit;
+  transition: background 140ms;
+}
+.sojo .theses-wrap { padding: 20px 32px; }
+
+@media (max-width: 768px) {
+  .sojo .theses-wrap { padding: 16px; }
+}
+
+@media (max-width: 640px) {
+  /* Drop the "leads" word so the row fits: name · count · button. */
+  .sojo .history-row { grid-template-columns: 1fr auto auto; gap: 12px; }
+  .sojo .history-row .h-leads-label { display: none; }
+}
+
 @media (max-width: 480px) {
   .sojo .header { padding: 0 12px; }
   /* Drop the wordmark (keep the round mark) so the 4 nav links + avatar fit. */

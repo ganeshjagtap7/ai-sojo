@@ -78,17 +78,7 @@ export default async function HistoryPage() {
               <Link
                 key={r.id}
                 href={otherThesis ? '/app/theses' : `/app?search=${r.id}`}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto auto auto',
-                  gap: 20,
-                  alignItems: 'center',
-                  padding: '14px 4px',
-                  borderBottom: '1px solid var(--hairline)',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  transition: 'background 140ms',
-                }}
+                className="history-row"
               >
                 <div>
                   <div style={{ fontSize: 15, marginBottom: 2 }}>{labelFor(r.query)}</div>
@@ -116,6 +106,7 @@ export default async function HistoryPage() {
                   {leadCount}
                 </div>
                 <div
+                  className="h-leads-label"
                   style={{
                     fontFamily: 'var(--font-geist-mono), monospace',
                     fontSize: 10.5,
