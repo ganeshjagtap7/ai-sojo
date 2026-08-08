@@ -95,24 +95,26 @@ export function SavedView({ rows }: { rows: SavedRow[] }) {
       </div>
 
       {rows.length === 0 ? null : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Business</th>
-              <th>Location</th>
-              <th className="num">Revenue</th>
-              <th className="num">Match</th>
-              <th>Stage</th>
-              <th className="num">Saved</th>
-              <th style={{ width: 60 }} />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <SavedRowEl key={row.id} row={row} onOpen={openLead} />
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Business</th>
+                <th>Location</th>
+                <th className="num">Revenue</th>
+                <th className="num">Match</th>
+                <th>Stage</th>
+                <th className="num">Saved</th>
+                <th style={{ width: 60 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <SavedRowEl key={row.id} row={row} onOpen={openLead} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <LeadDrawer

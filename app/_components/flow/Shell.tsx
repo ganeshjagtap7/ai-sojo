@@ -46,13 +46,13 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="logo-dot" />
             <span className="logo-word">Searcher</span>
           </a>
-          <div style={{ width: 1, height: 20, background: 'var(--ink-12)' }} />
+          <div className="shell-sep" style={{ width: 1, height: 20, background: 'var(--ink-12)' }} />
           {archetype ? (
             <div className="arche-chip" onClick={() => go(1)}>
               {archetype.name} · <span style={{ color: 'var(--ink-55)' }}>{ARCHETYPE_LABELS[archetype.id]}</span>
             </div>
           ) : (
-            <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <div className="shell-visitor" style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               {/* Signed-in users aren't "unidentified". Use a real name if the
                   auth profile has one (e.g. OAuth); otherwise a clean "Signed
                   in" — never the raw email handle. Once they complete Identify,
@@ -63,13 +63,13 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-        <div className="shell-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className="shell-right">
           {user ? (
             <>
-              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.05em' }}>
+              <span className="shell-email" style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-55)', letterSpacing: '0.05em' }}>
                 {user.email}
               </span>
-              <a className="doc-link" href="/app">Workspace</a>
+              <a className="doc-link doc-link-workspace" href="/app">Workspace</a>
               <a className="doc-link" href="#" onClick={(e) => { e.preventDefault(); signOut(); }}>Sign out</a>
             </>
           ) : (

@@ -57,6 +57,25 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+/* The active stage fills the space left after any notice banner, so a
+   full-height stage (e.g. the Stage 3 chat) doesn't add the banner's height on
+   top of 100% and force an unnecessary page scroll. Without a banner it's the
+   only child and simply fills the body as before. min-height:0 lets internal
+   scroll regions (the chat feed) work; taller content stages still scroll. */
+.shell-body > .lp,
+.shell-body > .identify,
+.shell-body > .facts,
+.shell-body > .s3,
+.shell-body > .confirm,
+.shell-body > .s5,
+.shell-body > .s6,
+.shell-body > .s7,
+.shell-body > .stage-section {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .shell-foot {
@@ -531,6 +550,11 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
 }
 .s3-rail-l { border-right: 1px solid var(--ink-12); }
 .s3-rail-r { border-left: 1px solid var(--ink-12); }
+/* The buckets collapse toggle + the in-panel Skip card are phone-only; on
+   tablet/desktop the rail always shows its contents and Skip lives in the
+   right rail (see the <=768 block). */
+.s3-buckets-toggle { display: none; }
+.s3-buckets-skip { display: none; }
 
 .s3-main {
   display: flex;
@@ -1714,3 +1738,142 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
   min-width: 80px;
 }
 .editable-input:focus { border-bottom-color: var(--ink); box-shadow: 0 1px 0 var(--ink); }
+
+/* ============================================================
+   Responsive. The wizard was authored desktop-only (fixed
+   multi-column grids, 40px paddings). These breakpoints collapse
+   the layouts, stack the Stage-3 rails, and shrink chrome for
+   tablet (<=1024), large phone (<=768) and phone (<=480).
+   ============================================================ */
+@media (max-width: 1024px) {
+  /* Landing: tighten the two-column gap. */
+  .lp-body { gap: 48px; }
+  /* Stage 3: drop the right rail, keep the buckets rail. */
+  .s3 { grid-template-columns: 220px 1fr; }
+  .s3-rail-r { display: none; }
+  /* Stage 5: three lanes -> two. Stage 6 meta: four -> two. */
+  .s5-lanes { grid-template-columns: repeat(2, 1fr); }
+  .s6-meta-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .shell { grid-template-rows: 50px 1fr 44px; overflow-x: hidden; }
+  .shell-top, .shell-foot { padding: 0 14px; gap: 12px; }
+  .shell-left { min-width: 0; gap: 10px; }
+  .shell-right { flex-shrink: 0; gap: 14px; }
+  .shell-foot-l { gap: 12px; min-width: 0; }
+  /* Hide secondary header/footer chrome that won't fit: the archetype chip,
+     the divider, the visitor/email labels, the redundant Workspace link and
+     the multi-segment progress bar all compete for a ~360px header/footer and
+     force wrapping or the logo colliding with the links. Keep the logo +
+     Sign in/out + Restart + Prev. */
+  .shell-sep, .arche-chip, .shell-visitor, .shell-email,
+  .doc-link-workspace, .shell-foot-progress { display: none; }
+  .doc-link { white-space: nowrap; font-size: 9px; letter-spacing: 0.12em; }
+
+  /* Stage paddings: 40px -> 20px horizontally. */
+  .lp { padding: 48px 20px; }
+  .identify, .facts, .confirm, .s7 { padding: 40px 20px; }
+
+  /* Landing: stack into one column so the testimonial panel flows BELOW the
+     form (still there on scroll) instead of being hidden. minmax(0,1fr) +
+     min-width:0 let the column and the email input shrink below their
+     intrinsic size — otherwise the block stays wider than the phone and the
+     heading / BEGIN button get clipped. */
+  .lp-body { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .lp-side { padding: 28px 22px; }
+  .lp-h { font-size: clamp(30px, 6vw, 44px); }
+  .lp-sub { font-size: 18px; }
+  .lp-form, .lp-sub, .lp-meta { max-width: none; }
+  .lp-form input { min-width: 0; }
+  .lp-foot { flex-direction: column; gap: 8px; }
+
+  /* Stage 1: cards drop the trailing arrow; name row stacks. */
+  .iden-card { grid-template-columns: 32px 1fr; gap: 14px; padding: 18px; }
+  .iden-card-arrow { display: none; }
+  .iden-name { grid-template-columns: 1fr; gap: 16px; }
+  .iden-cta { width: 100%; }
+
+  /* Stage 3: fixed-height chat — collapsible buckets bar on top (row 1),
+     conversation scrolls in the middle, composer pinned at the bottom (row 2).
+     The right rail is hidden; its "Skip to synthesis" is surfaced inside the
+     collapsible buckets panel instead (.s3-buckets-skip). */
+  .s3 { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .s3-rail-l { border-right: none; padding: 0; overflow: visible; }
+  .s3-rail-r { display: none; }
+  .s3-buckets-skip { display: block; margin-top: 4px; }
+  .s3-buckets-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--ivory);
+    border: none;
+    border-bottom: 1px solid var(--ink-12);
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-70);
+    cursor: pointer;
+  }
+  .s3-buckets-caret { font-size: 8px; color: var(--ink-40); }
+  .s3-buckets { display: none; padding: 12px 16px 16px; max-height: 42vh; overflow-y: auto; }
+  .s3-buckets.open { display: block; }
+  .s3-convo-inner { padding: 0 16px; }
+  .s3-composer { padding: 14px 16px; }
+  .ai-text { font-size: 18px; }
+  .teach-grid { grid-template-columns: 1fr; }
+
+  /* Stage 4: action buttons stack full-width. */
+  .confirm-actions { flex-direction: column; }
+  .confirm-btn.ghost { flex: 1 1 auto; }
+
+  /* Stage 5. */
+  .s5-thesis-band { padding: 24px 20px; }
+  .s5-feed-band { padding: 28px 20px; }
+  .s5-head { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .s5-head-r { text-align: left; }
+  .s5-lanes { grid-template-columns: 1fr; }
+  .s5-idle { grid-template-columns: 1fr; gap: 12px; }
+  .s5-idle input { min-width: 0; width: 100%; }
+  .s5-ready-card { flex-direction: column; align-items: stretch; gap: 20px; text-align: center; }
+  .s5-ready-card button { width: 100%; }
+
+  /* Stage 6. */
+  .s6-ribbon { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
+  .s6-acts { padding: 32px 20px 0; }
+  .s6-h1 { font-size: 32px; }
+  .s6-meta-row { grid-template-columns: 1fr; }
+  .s6-pricing-card { grid-template-columns: 1fr; gap: 24px; }
+  .s6-price-stack { min-width: 0; }
+  .s6-price-num, .s6-price-tag { text-align: left; }
+  .s6-quiet { flex-direction: column; align-items: flex-start; }
+
+  /* Stage 7: stack the two columns. */
+  .s7-inner { grid-template-columns: 1fr; gap: 32px; }
+
+  /* Dev tweaks panel must fit the viewport. */
+  .tweaks { width: calc(100vw - 32px); right: 16px; }
+}
+
+@media (max-width: 480px) {
+  .shell { grid-template-rows: 46px 1fr 40px; }
+  .lp { padding: 32px 16px; }
+  .lp-h { font-size: clamp(24px, 7vw, 32px); }
+  .lp-sub { font-size: 16px; }
+  .lp-meta { grid-template-columns: 1fr; gap: 16px; }
+  .identify, .facts, .confirm, .s7 { padding: 28px 16px; }
+  .iden-q { font-size: clamp(23px, 7vw, 30px); }
+  .iden-card-body .t { font-size: 18px; }
+  .facts-motto { font-size: 20px; }
+  .confirm-thesis { font-size: 18px; }
+  .confirm-thesis p.dim { font-size: 15px; }
+  .ai-text { font-size: 16px; }
+  .teach-h { font-size: 17px; }
+  .s5-head-l h2 { font-size: 26px; }
+  .s5-idle .q { font-size: 17px; }
+  .s6-h1 { font-size: 24px; }
+}

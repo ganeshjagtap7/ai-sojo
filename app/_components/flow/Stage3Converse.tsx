@@ -88,6 +88,9 @@ export function Stage3Converse() {
   const [currentMode, setCurrentMode] = useState<Mode>('elicit');
   const [activeBucket, setActiveBucket] = useState<BucketKey>('opening');
   const [sessionComplete, setSessionComplete] = useState(false);
+  // Phone-only: the buckets rail collapses to a tappable bar (see .s3-buckets-*
+  // in flow.css). Ignored on tablet/desktop where the rail always shows.
+  const [bucketsOpen, setBucketsOpen] = useState(false);
   const convoRef = useRef<HTMLDivElement>(null);
   const sentOpenerRef = useRef(false);
 
@@ -280,24 +283,43 @@ export function Stage3Converse() {
   return (
     <div className="s3">
       <aside className="s3-rail-l">
-        <div className="rail-h">§ Three</div>
-        <div className="rail-t">Thesis buckets</div>
-        {BUCKET_DEFS.map((b) => {
-          const status = bucketStatus(b.id);
-          return (
-            <div className="bucket" key={b.id}>
-              <div className="bucket-h">
-                <div className={`bucket-dot ${status}`} />
-                <div className="bucket-l">{b.label}</div>
+        <button
+          type="button"
+          className="s3-buckets-toggle"
+          onClick={() => setBucketsOpen((o) => !o)}
+          aria-expanded={bucketsOpen}
+        >
+          <span>Thesis buckets · {Object.keys(state.buckets).length}/{BUCKET_DEFS.length}</span>
+          <span className="s3-buckets-caret" aria-hidden>{bucketsOpen ? '▲' : '▼'}</span>
+        </button>
+        <div className={`s3-buckets ${bucketsOpen ? 'open' : ''}`}>
+          <div className="rail-h">§ Three</div>
+          <div className="rail-t">Thesis buckets</div>
+          {BUCKET_DEFS.map((b) => {
+            const status = bucketStatus(b.id);
+            return (
+              <div className="bucket" key={b.id}>
+                <div className="bucket-h">
+                  <div className={`bucket-dot ${status}`} />
+                  <div className="bucket-l">{b.label}</div>
+                </div>
+                {state.buckets[b.id] ? (
+                  <div className="bucket-v">{state.buckets[b.id]}</div>
+                ) : (
+                  <div className="bucket-v empty">{status === 'live' ? 'Listening now…' : 'Not yet'}</div>
+                )}
               </div>
-              {state.buckets[b.id] ? (
-                <div className="bucket-v">{state.buckets[b.id]}</div>
-              ) : (
-                <div className="bucket-v empty">{status === 'live' ? 'Listening now…' : 'Not yet'}</div>
-              )}
+            );
+          })}
+          {/* Phone-only: the right rail (with Skip) is hidden on small screens,
+              so surface the escape hatch inside this collapsible panel too. */}
+          <div className="s3-buckets-skip">
+            <div className="escape-card">
+              <div className="t">Want me to stop and just spit out a thesis?</div>
+              <button onClick={goSkip}>Skip to synthesis →</button>
             </div>
-          );
-        })}
+          </div>
+        </div>
       </aside>
 
       <div className="s3-main">
