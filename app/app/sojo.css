@@ -486,3 +486,83 @@
 /* Fade up --------------------------------------------------------------- */
 @keyframes sojo-fadeup { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .sojo .fadeup { animation: sojo-fadeup 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* ============================================================
+   Responsive workspace. The lead card already collapses at
+   <=880px (above); these breakpoints shrink chrome/paddings,
+   let the header + toolbar wrap, make the saved table scroll,
+   and take the drawer/toasts full-width on phones.
+   ============================================================ */
+@media (max-width: 768px) {
+  .sojo .header { padding: 0 16px; gap: 8px; }
+  .sojo .brand-name { font-size: 17px; }
+  .sojo .header-nav { gap: 0; }
+  .sojo .header-nav a { padding: 5px 8px; font-size: 12px; }
+  .sojo .app { overflow-x: hidden; }
+  .sojo .results-head { padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .sojo .results-head-meta { font-size: 10.5px; flex-wrap: wrap; row-gap: 2px; }
+  .sojo .results-toolbar { padding: 10px 16px; flex-wrap: wrap; }
+  .sojo .results-body { padding: 16px 16px 32px; }
+  .sojo .refine-dock { padding: 12px 16px 18px; }
+  .sojo .simple-page { padding: 32px 16px 48px; }
+  .sojo .simple-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .sojo .simple-head h1 { font-size: 30px; }
+
+  /* Saved table: scroll horizontally inside its own container rather than
+     forcing the whole page to overflow. */
+  .sojo .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sojo .table-scroll .table { min-width: 620px; }
+}
+
+@media (max-width: 640px) {
+  /* Tighten the roomy lead card on phones: less card padding, smaller row
+     gaps between the stacked sections, and tighter stat rows. */
+  .sojo .lead { padding: 12px 12px; gap: 8px; }
+  .sojo .match-col { gap: 6px; }
+  .sojo .actions-col { gap: 2px; }
+  .sojo .stat-row { padding: 3px 0; }
+  .sojo .lead-reason { margin-top: 2px; }
+  .sojo .match-score { font-size: 24px; }
+  .sojo .searching { padding: 40px 16px 16px; }
+  .sojo .searching-title { font-size: 26px; }
+  .sojo .simple-head h1 { font-size: 26px; }
+}
+
+/* History rows + Theses list — moved off inline styles so they adapt. */
+.sojo .history-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 20px;
+  align-items: center;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--hairline);
+  text-decoration: none;
+  color: inherit;
+  transition: background 140ms;
+}
+.sojo .theses-wrap { padding: 20px 32px; }
+
+@media (max-width: 768px) {
+  .sojo .theses-wrap { padding: 16px; }
+}
+
+@media (max-width: 640px) {
+  /* Drop the "leads" word so the row fits: name · count · button. */
+  .sojo .history-row { grid-template-columns: 1fr auto auto; gap: 12px; }
+  .sojo .history-row .h-leads-label { display: none; }
+}
+
+@media (max-width: 480px) {
+  .sojo .header { padding: 0 12px; }
+  /* Drop the wordmark (keep the round mark) so the 4 nav links + avatar fit. */
+  .sojo .brand-name { display: none; }
+  .sojo .header-nav a { padding: 5px 7px; }
+  .sojo .header-actions { gap: 6px; }
+  /* Free up the tight header on phones — the job status shows in the results
+     header too, so the pill is redundant here. */
+  .sojo .job-pill { display: none; }
+  /* Full-bleed drawer + toast on phones. */
+  .sojo-drawer { width: 100vw; }
+  .sojo .toast { min-width: 0; width: calc(100vw - 48px); }
+  .sojo .toast-stack { left: 24px; right: 24px; }
+}

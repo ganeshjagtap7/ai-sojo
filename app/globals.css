@@ -49,6 +49,12 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
+/* Responsive base guards: keep phones from zooming on rotate and stop media
+   from forcing horizontal overflow. Layout-specific breakpoints live in
+   flow.css (wizard) and app/sojo.css (workspace). */
+html { -webkit-text-size-adjust: 100%; }
+img, video, canvas { max-width: 100%; height: auto; }
+
 /* ===== Type primitives ===== */
 
 .serif { font-family: var(--serif); }
