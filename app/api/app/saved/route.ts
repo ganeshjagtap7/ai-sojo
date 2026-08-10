@@ -65,7 +65,10 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (dup) return Response.json({ ok: true, deduped: true, id: dup.id });
     }
-    return Response.json({ error: error?.message ?? 'Save failed' }, { status: 500 });
+    // Any other failure: log the real error, return calm copy (consistent with
+    // the PATCH/DELETE handlers) rather than leaking the raw DB message.
+    console.error('[saved] save failed:', error);
+    return Response.json({ error: 'Could not save this lead. Please try again.' }, { status: 500 });
   }
   return Response.json({ ok: true, id: data.id }, { status: 201 });
 }
