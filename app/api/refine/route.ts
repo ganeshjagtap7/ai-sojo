@@ -111,8 +111,9 @@ export async function POST(req: Request) {
 
     return Response.json({ criteria, summary });
   } catch (err) {
+    console.error('[refine] failed:', err);
     return Response.json(
-      { error: err instanceof Error ? err.message : 'Refine failed' },
+      { error: 'We couldn’t process that request. Please try rephrasing.' },
       { status: 500 },
     );
   }

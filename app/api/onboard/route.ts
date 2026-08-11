@@ -61,8 +61,9 @@ export async function POST(req: Request) {
       .update({ archetype: archetype.id })
       .eq('id', user.id);
     if (archetypeError) {
+      console.error('[onboard] archetype update failed:', archetypeError);
       return Response.json(
-        { error: `Failed to save archetype: ${archetypeError.message}` },
+        { error: 'Could not save your thesis right now. Please try again.' },
         { status: 500 },
       );
     }
@@ -82,8 +83,9 @@ export async function POST(req: Request) {
   });
 
   if (error || !data) {
+    console.error('[onboard] set_active_thesis failed:', error);
     return Response.json(
-      { error: `Failed to persist thesis: ${error?.message ?? 'unknown'}` },
+      { error: 'Could not save your thesis right now. Please try again.' },
       { status: 500 },
     );
   }

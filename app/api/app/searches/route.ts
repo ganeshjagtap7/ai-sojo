@@ -66,8 +66,9 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (error) {
+    console.error('[searches] persist failed:', error);
     return Response.json(
-      { error: `Failed to persist search: ${error.message}` },
+      { error: 'Could not save your search. Please try again.' },
       { status: 500 },
     );
   }

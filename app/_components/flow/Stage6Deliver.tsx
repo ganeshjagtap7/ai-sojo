@@ -123,6 +123,25 @@ export function Stage6Deliver() {
         </div>
       </div>
 
+      {/* Save failures must be visible from the top (pinned) button too — not
+          just the one near the bottom CTA, which needs scrolling to reach. */}
+      {persistError && (
+        <p
+          role="alert"
+          style={{
+            margin: 0,
+            padding: '10px 20px',
+            fontSize: 13,
+            color: '#991b1b',
+            textAlign: 'center',
+            background: 'rgba(153,44,44,0.06)',
+            borderBottom: '1px solid var(--ink-12)',
+          }}
+        >
+          {persistError}
+        </p>
+      )}
+
       <div className="s6-acts">
         {/* ACT I — THESIS */}
         <section className="s6-act">

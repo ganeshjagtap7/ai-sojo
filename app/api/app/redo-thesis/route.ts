@@ -20,7 +20,8 @@ export async function POST() {
     .eq('is_active', true);
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[redo-thesis] deactivate failed:', error);
+    return Response.json({ error: 'Could not start a new thesis. Please try again.' }, { status: 500 });
   }
 
   return Response.json({ ok: true });

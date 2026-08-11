@@ -18,7 +18,8 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[theses] list failed:', error);
+    return Response.json({ error: 'Could not load your theses. Please try again.' }, { status: 500 });
   }
   return Response.json({ theses: data ?? [] });
 }
@@ -58,7 +59,8 @@ export async function POST(req: Request) {
   // zero active theses (migration 0005).
   const { error } = await supabase.rpc('activate_thesis', { p_thesis_id: thesisId });
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[theses] activate failed:', error);
+    return Response.json({ error: 'Could not switch your active thesis. Please try again.' }, { status: 500 });
   }
   return Response.json({ ok: true });
 }
