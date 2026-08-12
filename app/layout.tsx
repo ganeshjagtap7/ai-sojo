@@ -43,9 +43,29 @@ const instrumentSerif = Instrument_Serif({
   style: ['normal', 'italic'],
 });
 
+const SITE_URL = 'https://ai-sojo.vercel.app';
+const TITLE = 'Searcher — A thesis in five minutes';
+const DESCRIPTION =
+  'An investment committee that thinks in targets, not decks. Describe an acquisition mandate; get a working thesis and a ranked board of real businesses.';
+
 export const metadata: Metadata = {
-  title: 'Searcher — A thesis in four minutes',
-  description: 'An investment committee that thinks in targets, not decks.',
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  applicationName: 'Searcher',
+  // So the link looks legitimate when shared (Slack, iMessage, X, etc.).
+  openGraph: {
+    type: 'website',
+    siteName: 'Searcher',
+    url: '/',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

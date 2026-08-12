@@ -142,9 +142,9 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
 /* ============ Stage 0 — landing ============ */
 .lp {
   min-height: 100%;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  padding: 80px 40px;
+  display: flex;
+  flex-direction: column;
+  padding: 64px 40px 0;
 }
 .lp-body {
   max-width: 860px;
@@ -267,15 +267,117 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
   max-width: 860px;
   margin: 60px auto 0;
   width: 100%;
-  padding-top: 20px;
+  padding: 20px 0 40px;
   border-top: 1px solid var(--ink-12);
   display: flex;
   justify-content: space-between;
+  gap: 16px;
   font-family: var(--sans);
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-40);
+}
+.lp-foot-links { display: flex; align-items: center; gap: 10px; }
+.lp-foot-links a {
+  color: var(--ink-40);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color 0.15s var(--ease);
+}
+.lp-foot-links a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+.lp-foot-links .sep { color: var(--ink-20); }
+
+/* ============ Landing marketing sections (how-it-works / built-for /
+   pricing / faq) — added below the hero so first-time visitors get a real
+   explanation before committing. ============ */
+.lp-sec {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 56px 0;
+  border-top: 1px solid var(--ink-12);
+}
+.lp-sec:first-of-type { margin-top: 40px; }
+.lp-sec-eye {
+  font-family: var(--sans);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--ink-55); margin-bottom: 14px;
+}
+.lp-sec-h {
+  font-family: var(--serif);
+  font-size: clamp(26px, 3.4vw, 36px);
+  font-weight: 400; letter-spacing: -0.02em; line-height: 1.1;
+  color: var(--ink); margin: 0 0 16px;
+}
+.lp-sec-h em { font-style: italic; }
+.lp-sec-sub {
+  font-family: var(--serif); font-style: italic;
+  font-size: 17px; color: var(--ink-70); line-height: 1.5;
+  margin: 0 0 28px; max-width: 560px;
+}
+
+/* how it works */
+.lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 28px; }
+.lp-step-n {
+  font-family: var(--serif); font-style: italic; font-size: 26px;
+  color: var(--ink-40); line-height: 1; margin-bottom: 12px;
+}
+.lp-step-t {
+  font-family: var(--serif); font-size: 19px; color: var(--ink);
+  letter-spacing: -0.01em; margin-bottom: 8px;
+}
+.lp-step-b {
+  font-family: var(--sans); font-size: 13.5px; color: var(--ink-70);
+  line-height: 1.6; margin: 0;
+}
+
+/* built for */
+.lp-arch-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1px; background: var(--ink-12);
+  border: 1px solid var(--ink-12);
+}
+.lp-arch { background: var(--paper); padding: 18px 20px; }
+/* Five archetypes in a 2-col grid leaves a blank 6th cell — let the last one
+   span the full width so the grid reads clean. */
+.lp-arch:last-child { grid-column: 1 / -1; }
+.lp-arch-t { font-family: var(--serif); font-size: 16px; color: var(--ink); margin-bottom: 4px; }
+.lp-arch-m { font-family: var(--sans); font-size: 12px; color: var(--ink-55); letter-spacing: 0.02em; line-height: 1.5; }
+
+/* pricing */
+.lp-price-card {
+  display: grid; grid-template-columns: 260px 1fr; gap: 40px;
+  border: 1px solid var(--ink); background: var(--paper); padding: 32px 36px;
+  align-items: start; margin-top: 8px;
+}
+.lp-price-num { font-family: var(--serif); font-size: 38px; letter-spacing: -0.02em; color: var(--ink); line-height: 1; }
+.lp-price-num .u { font-size: 14px; color: var(--ink-55); font-style: italic; }
+.lp-price-note { font-family: var(--sans); font-size: 12.5px; color: var(--ink-55); margin: 12px 0 0; line-height: 1.5; }
+.lp-price-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lp-price-list li {
+  font-family: var(--sans); font-size: 14px; color: var(--ink); line-height: 1.5;
+  padding-left: 22px; position: relative;
+}
+.lp-price-list li::before { content: '→'; position: absolute; left: 0; color: var(--ink-40); }
+
+/* faq */
+.lp-faq { display: flex; flex-direction: column; margin-top: 8px; }
+.lp-faq-item { border-top: 1px solid var(--ink-12); }
+.lp-faq-item:last-child { border-bottom: 1px solid var(--ink-12); }
+.lp-faq-item summary {
+  list-style: none; cursor: pointer;
+  font-family: var(--serif); font-size: 18px; color: var(--ink);
+  padding: 18px 0; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+}
+.lp-faq-item summary::-webkit-details-marker { display: none; }
+.lp-faq-item summary::after { content: '+'; color: var(--ink-40); font-family: var(--sans); font-size: 18px; flex-shrink: 0; }
+.lp-faq-item[open] summary::after { content: '\2013'; }
+.lp-faq-item p {
+  font-family: var(--sans); font-size: 14px; color: var(--ink-70); line-height: 1.65;
+  margin: 0; padding: 0 0 20px; max-width: 620px;
 }
 
 /* ============ Stage 1 — identify ============ */
@@ -1787,6 +1889,11 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
   .lp-form, .lp-sub, .lp-meta { max-width: none; }
   .lp-form input { min-width: 0; }
   .lp-foot { flex-direction: column; gap: 8px; }
+  /* Marketing sections stack to one column on phone/tablet. */
+  .lp-sec { padding: 40px 0; }
+  .lp-steps { grid-template-columns: 1fr; gap: 24px; }
+  .lp-arch-grid { grid-template-columns: 1fr; }
+  .lp-price-card { grid-template-columns: 1fr; gap: 24px; padding: 24px 20px; }
 
   /* Stage 1: cards drop the trailing arrow; name row stacks. */
   .iden-card { grid-template-columns: 32px 1fr; gap: 14px; padding: 18px; }
