@@ -44,7 +44,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 const SITE_URL = 'https://ai-sojo.vercel.app';
-const TITLE = 'Searcher — A thesis in four minutes';
+const TITLE = 'Searcher — A thesis in five minutes';
 const DESCRIPTION =
   'An investment committee that thinks in targets, not decks. Describe an acquisition mandate; get a working thesis and a ranked board of real businesses.';
 

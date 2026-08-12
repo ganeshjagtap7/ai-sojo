@@ -4,7 +4,7 @@ import { ImageResponse } from 'next/og';
 // automatically from this file.
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'Searcher — A thesis in four minutes';
+export const alt = 'Searcher — A thesis in five minutes';
 
 export default function OgImage() {
   return new ImageResponse(

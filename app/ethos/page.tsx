@@ -80,11 +80,6 @@ export default function EthosPage() {
           judgment. Contact details come from live scrapes, so verify them before
           you reach out.
         </p>
-        <p style={p}>
-          <strong>Honest limits.</strong> Very narrow mandates can legitimately
-          return little, and some large marketplaces and login-gated sources aren’t
-          covered yet. We’d rather tell you that than pretend otherwise.
-        </p>
 
         <div style={{ marginTop: 48, paddingTop: 20, borderTop: '1px solid var(--ink-12)', display: 'flex', gap: 16, fontFamily: 'var(--sans)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
           <Link href="/" style={{ color: 'var(--ink-55)', textDecoration: 'none' }}>Home</Link>

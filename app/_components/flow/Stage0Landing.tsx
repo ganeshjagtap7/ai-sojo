@@ -46,7 +46,7 @@ const FAQS = [
   },
   {
     q: 'How long does it really take?',
-    a: 'The conversation is a few minutes. The search itself usually runs 1–2 minutes — the progress panel shows each source as it completes, and some sources failing is normal; the search continues without them.',
+    a: 'About five minutes end to end — a few minutes of conversation to shape the thesis, then a 1–2 minute live search. The progress panel shows each source as it completes, and some sources failing is normal; the search continues without them.',
   },
   {
     q: 'Who is this not a good fit for?',
@@ -99,7 +99,7 @@ export function Stage0Landing() {
             </div>
             <div className="lp-meta-cell">
               <div className="lbl">Turnaround</div>
-              <div className="val">~4 minutes</div>
+              <div className="val">~5 minutes</div>
             </div>
           </div>
         </div>
