@@ -1,0 +1,66 @@
+name: Health check
+
+# Hits the live app every few hours and emails if the database or the Apify
+# scraping quota is broken — the two failures that took the product down
+# unnoticed. Runs off-platform (GitHub) so it catches a fully-down Vercel too.
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+  workflow_dispatch: {} # allow manual runs for testing
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe /api/health
+        id: probe
+        env:
+          # Defaults to the live app; override by setting a HEALTH_CHECK_URL repo variable.
+          URL: ${{ vars.HEALTH_CHECK_URL || 'https://ai-sojo.vercel.app/api/health' }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::error::HEALTH_CHECK_URL is empty"
+            exit 1
+          fi
+          code=$(curl -sS -o body.json -w "%{http_code}" --max-time 30 "$URL" || echo "000")
+          echo "status_code=$code" >> "$GITHUB_OUTPUT"
+          echo "HTTP $code"
+          cat body.json 2>/dev/null || echo "(no response body)"
+          status=$(jq -r '.status // "unknown"' body.json 2>/dev/null || echo "unknown")
+          echo "app_status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "200" ] && [ "$status" = "ok" ]; then
+            echo "healthy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send alert email
+        if: steps.probe.outputs.healthy != 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          # Change the alert recipient by setting an ALERT_EMAIL_TO repo variable.
+          TO: ${{ vars.ALERT_EMAIL_TO || 'y.sudhir2804@gmail.com' }}
+          CODE: ${{ steps.probe.outputs.status_code }}
+          APP_STATUS: ${{ steps.probe.outputs.app_status }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ] || [ -z "$TO" ]; then
+            echo "RESEND_API_KEY or ALERT_EMAIL_TO not set — skipping email."
+            echo "(The job will still fail below, so GitHub's own failure email goes to repo admins.)"
+            exit 0
+          fi
+          BODY=$(cat body.json 2>/dev/null || echo "no response body")
+          PAYLOAD=$(jq -n \
+            --arg to "$TO" \
+            --arg text "AI-Sojo health check FAILED at $(date -u +'%Y-%m-%d %H:%M UTC'). HTTP=$CODE status=$APP_STATUS. Response: $BODY" \
+            '{from:"AI-Sojo Health <onboarding@resend.dev>", to:[$to], subject:"🚨 AI-Sojo health check failed", text:$text}')
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+          echo "Alert email sent to $TO"
+
+      - name: Fail job if unhealthy
+        if: steps.probe.outputs.healthy != 'true'
+        run: |
+          echo "::error::Health check reported unhealthy (HTTP ${{ steps.probe.outputs.status_code }}, status=${{ steps.probe.outputs.app_status }})"
+          exit 1
