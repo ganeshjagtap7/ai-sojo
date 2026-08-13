@@ -14,7 +14,9 @@ export default async function SignupPage({
   const { data: { user } } = await supabase.auth.getUser();
   const { error, message, next } = await searchParams;
 
-  const safeDest = safeNext(next ?? '/app/onboarding', '/app/onboarding');
+  // New users land in onboarding by default; the thesis-save handoff is only
+  // used when a flow passes next=/app/onboarding explicitly (Stage 6).
+  const safeDest = safeNext(next ?? '/', '/');
   if (user) redirect(safeDest);
 
   const nextPath = safeDest;
