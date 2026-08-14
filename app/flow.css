@@ -76,7 +76,16 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
 .shell-body > .stage-section {
   flex: 1 1 auto;
   min-height: 0;
+  /* Scroll a stage whose content is taller than the viewport (short laptops,
+     landscape phones) instead of letting it bleed under the fixed header/footer
+     where body{overflow:hidden} clips it unreachably. Content that fits shows
+     no scrollbar. */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+/* Stage 3 (chat) owns its own internal scroll regions; keep the outer wrapper
+   non-scrolling so there's never a double scrollbar. */
+.shell-body > .s3 { overflow: hidden; }
 
 .shell-foot {
   background: var(--night);
@@ -384,9 +393,14 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
 .identify {
   min-height: 100%;
   display: flex;
+  /* safe center: center vertically when it fits, but fall back to top-aligned
+     when the content is taller than the box — so the heading is never clipped
+     off the top with no way to scroll to it. The plain `center` is a fallback
+     for browsers without the `safe` keyword (older Safari). */
   align-items: center;
+  align-items: safe center;
   justify-content: center;
-  padding: 80px 40px;
+  padding: 56px 40px;
 }
 .identify-inner {
   max-width: 720px;
@@ -530,6 +544,7 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
   min-height: 100%;
   display: flex;
   align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 64px 40px;
 }
@@ -1013,6 +1028,7 @@ body:has(.shell) { background: var(--paper); overflow: hidden; }
   min-height: 100%;
   display: flex;
   align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 60px 40px;
 }

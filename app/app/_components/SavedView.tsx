@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { RankedLead } from '@/lib/types';
 import { tierOf, locLine } from '@/app/app/_lib/leadScoring';
 import { LeadDrawer } from './LeadDrawer';
+import { EmptyState } from './EmptyState';
 import { ToastStack, useToasts } from './ToastStack';
 import { friendlyActionError } from '@/lib/errors/actionError';
 
@@ -94,7 +95,14 @@ export function SavedView({ rows }: { rows: SavedRow[] }) {
         </div>
       </div>
 
-      {rows.length === 0 ? null : (
+      {rows.length === 0 ? (
+        <EmptyState
+          eyebrow="Saved leads"
+          title={<>Nothing saved <em>yet</em>.</>}
+          sub="When a business is worth a call, hit Save on the board and it lands here — with a stage you can move through outreach."
+          cta={{ href: '/app', label: 'Go to your board →' }}
+        />
+      ) : (
         <div className="table-scroll">
           <table className="table">
             <thead>

@@ -139,8 +139,11 @@ export function LeadDrawer({ lead, open, onClose, onSave, isSaved }: Props) {
               {website !== '—' && (
                 <>
                   {' · '}
+                  {/* Just the hostname here — the full (often tracking-laden) URL
+                      lives in the Contact → Website row so it can't bloat the
+                      header and wrap under the score card on mobile. */}
                   <a href={website.startsWith('http') ? website : `https://${website}`} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
-                    {website}
+                    {hostnameOf(website.startsWith('http') ? website : `https://${website}`)}
                   </a>
                 </>
               )}
