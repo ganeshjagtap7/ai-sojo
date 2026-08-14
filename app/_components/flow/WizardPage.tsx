@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
 import { Stage7AuthGate } from '../auth/Stage7AuthGate';
 import { FlowProvider, useFlow } from './FlowProvider';
@@ -14,8 +15,18 @@ import { Stage6Deliver } from './Stage6Deliver';
 import { TweaksPanel } from './TweaksPanel';
 
 function StageRouter() {
-  const { state } = useFlow();
+  const { state, dispatch } = useFlow();
   const { user, loading } = useAuth();
+
+  // Stage 0 is the anonymous marketing landing (email capture) — it exists only
+  // to collect an email from logged-out visitors before signup. A signed-in
+  // user doesn't need it (and it looks like a logged-out page), so once auth
+  // resolves, skip them straight into Stage 1. Anonymous users are untouched.
+  useEffect(() => {
+    if (!loading && user && state.stage === 0) {
+      dispatch({ type: 'SET_STAGE', stage: 1 });
+    }
+  }, [loading, user, state.stage, dispatch]);
 
   // Login before onboarding: the wizard hits paid, auth-gated endpoints
   // (/api/chat at stage 3, /api/thesis at stage 5). Without a session those
@@ -27,6 +38,10 @@ function StageRouter() {
     if (loading) return null; // don't render a stage (or fire its calls) until auth resolves
     if (!user) return <Stage7AuthGate context="start" />;
   }
+
+  // Don't flash the Stage 0 hero to a signed-in user while the effect above
+  // bumps them to Stage 1.
+  if (!loading && user && state.stage === 0) return null;
 
   switch (state.stage) {
     case 0: return <Stage0Landing />;

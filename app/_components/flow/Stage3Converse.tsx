@@ -37,17 +37,21 @@ function friendlyErrorText(raw: unknown): string {
   const code = inner?.code as string | undefined;
   const type = inner?.type as string | undefined;
 
-  if (code === 'insufficient_quota' || type === 'insufficient_quota') {
-    return "The AI provider's billing quota is exhausted on this project. Ask Ganesh to top up the API plan, then try again.";
+  // Also match on the message text — streamed provider errors often arrive as a
+  // plain string with no code/type, so keyword detection is what actually fires.
+  const text = (typeof raw === 'string' ? raw : String(inner?.message ?? '')).toLowerCase();
+
+  if (code === 'insufficient_quota' || type === 'insufficient_quota' || text.includes('quota')) {
+    return 'Our AI is briefly over capacity. Please try again in a moment.';
   }
-  if (code === 'rate_limit_exceeded' || type === 'rate_limit_error') {
-    return 'The model is rate-limited right now. Give it a few seconds and try again.';
+  if (code === 'rate_limit_exceeded' || type === 'rate_limit_error' || text.includes('rate limit')) {
+    return 'The AI is rate-limited right now. Give it a few seconds and try again.';
   }
-  if (code === 'invalid_api_key' || code === 'invalid_request_error') {
-    return 'The AI provider rejected the request. The API key may be missing or invalid.';
+  if (code === 'invalid_api_key' || code === 'invalid_request_error' || text.includes('api key') || text.includes('apikey')) {
+    return 'The AI service is temporarily unavailable. Please try again shortly.';
   }
-  if (typeof raw === 'string' && raw.length < 200) return raw;
-  return "I couldn't reach the model. Try again in a moment.";
+  // Never surface the raw provider error to the user.
+  return "I couldn't reach the AI just now. Try again in a moment.";
 }
 
 const BUCKET_DEFS: { id: BucketKey; label: string }[] = [

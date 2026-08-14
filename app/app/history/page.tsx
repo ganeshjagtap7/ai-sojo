@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { HistoryRow } from '@/app/app/_components/HistoryRow';
 
 export const dynamic = 'force-dynamic';
 // Serve near the Supabase DB (Mumbai) — these pages are pure DB reads, and the
@@ -75,50 +75,17 @@ export default async function HistoryPage() {
             const leadCount = Array.isArray(r.leads) ? r.leads.length : 0;
             const statusColor = r.status === 'running' ? 'var(--accent-deep)' : r.status === 'failed' ? 'var(--danger)' : 'var(--success)';
             return (
-              <Link
+              <HistoryRow
                 key={r.id}
-                href={otherThesis ? '/app/theses' : `/app?search=${r.id}`}
-                className="history-row"
-              >
-                <div>
-                  <div style={{ fontSize: 15, marginBottom: 2 }}>{labelFor(r.query)}</div>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-geist-mono), monospace',
-                      fontSize: 11,
-                      color: 'var(--faint)',
-                      letterSpacing: '0.03em',
-                    }}
-                  >
-                    <span style={{ color: statusColor }}>● {r.status}</span> · {fmtAgo(r.created_at)}
-                    {otherThesis ? ' · different thesis' : ''}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-instrument), serif',
-                    fontSize: 22,
-                    color: 'var(--ink)',
-                    fontVariantNumeric: 'tabular-nums',
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {leadCount}
-                </div>
-                <div
-                  className="h-leads-label"
-                  style={{
-                    fontFamily: 'var(--font-geist-mono), monospace',
-                    fontSize: 10.5,
-                    color: 'var(--faint)',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  leads
-                </div>
-                <span className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }}>{otherThesis ? 'Switch thesis' : 'Open'}</span>
-              </Link>
+                searchId={r.id}
+                thesisId={r.thesis_id}
+                needsSwitch={otherThesis}
+                label={labelFor(r.query)}
+                status={r.status}
+                statusColor={statusColor}
+                agoText={fmtAgo(r.created_at)}
+                leadCount={leadCount}
+              />
             );
           })}
         </div>

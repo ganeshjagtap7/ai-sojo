@@ -114,7 +114,7 @@ export function Stage6Deliver() {
           ) : (
             <a
               className="s6-ribbon-btn solid"
-              href="/signup"
+              href="/signup?next=/app/onboarding"
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
             >
               Create account to unlock your deals →
@@ -206,7 +206,7 @@ export function Stage6Deliver() {
             </button>
           ) : (
             <a
-              href="/signup"
+              href="/signup?next=/app/onboarding"
               style={{
                 display: 'inline-block',
                 fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',

@@ -31,7 +31,11 @@ export async function loginWithPassword(formData: FormData) {
 export async function signupWithPassword(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
-  const next = safeNext(String(formData.get('next') ?? '/app/onboarding'), '/app/onboarding');
+  // A direct signup (from the login page's "Create an account") is a NEW user
+  // with no thesis — send them into the onboarding wizard, not the thesis-save
+  // handoff (/app/onboarding). Flows that DO have a thesis to persist (Stage 6's
+  // "Create account to unlock") pass next=/app/onboarding explicitly.
+  const next = safeNext(String(formData.get('next') ?? '/'), '/');
 
   if (!email || !password) {
     redirect(`/signup?error=${encodeURIComponent('Email and password are required')}&next=${encodeURIComponent(next)}`);

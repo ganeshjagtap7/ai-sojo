@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Workspace } from './_components/Workspace';
+import { NoThesis } from './_components/NoThesis';
 import type { RankedLead, SearchMetadata } from '@/lib/types';
 import type { Buckets, Facts } from '@/lib/flow/types';
 
@@ -47,9 +48,9 @@ export default async function AppHomePage({
     .maybeSingle<Omit<ThesisRow, 'archetype_id'>>();
 
   if (!thesis) {
-    // Carry a notice so the wizard can explain the bounce — otherwise clicking
-    // "Workspace" with no active thesis silently loops back here with no signal.
-    redirect('/?notice=finish-onboarding');
+    // A signed-in user with no active thesis lands in their workspace with a
+    // "start a thesis" prompt — not bounced back into the onboarding wizard.
+    return <NoThesis />;
   }
 
   const { data: profile } = await supabase
