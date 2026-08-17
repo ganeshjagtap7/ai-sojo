@@ -412,10 +412,15 @@
   font-family: var(--font-geist), sans-serif;
 }
 .sojo-drawer.open { transform: translateX(0); }
-.sojo-drawer .header { padding: 40px 22px; border-bottom: 1px solid var(--border, #E4E0D4); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #FFFFFF; }
-.sojo-drawer .title h3 { font-family: var(--font-instrument), serif; font-size: 22px; font-weight: 400; margin: 0; letter-spacing: -0.02em; }
-.sojo-drawer .title .sub { font-family: var(--font-geist-mono), monospace; font-size: 11.5px; color: #9B9687; margin-top: 3px; }
-.sojo-drawer .body { padding: 22px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+.sojo-drawer .header { padding: 22px 22px 18px; border-bottom: 1px solid var(--border, #E4E0D4); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; background: #FFFFFF; position: relative; z-index: 1; }
+.sojo-drawer .title { min-width: 0; }
+.sojo-drawer .title h3 { font-family: var(--font-instrument), serif; font-size: 22px; font-weight: 400; margin: 0; letter-spacing: -0.02em; line-height: 1.2; overflow-wrap: anywhere; }
+.sojo-drawer .title .sub { font-family: var(--font-geist-mono), monospace; font-size: 11.5px; color: #9B9687; margin-top: 4px; overflow-wrap: anywhere; }
+.sojo-drawer .header .icon-btn { flex-shrink: 0; }
+/* min-height:0 lets the 1fr scroll row actually shrink and scroll inside the
+   grid — without it a tall body overflows and bleeds under the header on
+   mobile instead of scrolling. */
+.sojo-drawer .body { padding: 22px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; min-height: 0; }
 .sojo-drawer .footer { padding: 14px 22px; border-top: 1px solid var(--border, #E4E0D4); display: flex; gap: 8px; background: #FFFFFF; }
 .sojo-drawer h4 { font-family: var(--font-geist-mono), monospace; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: #9B9687; font-weight: 500; margin: 0 0 10px; }
 .sojo-drawer .kv-grid { display: grid; grid-template-columns: 130px 1fr; gap: 0 14px; }
@@ -565,4 +570,82 @@
   .sojo-drawer { width: 100vw; }
   .sojo .toast { min-width: 0; width: calc(100vw - 48px); }
   .sojo .toast-stack { left: 24px; right: 24px; }
+}
+
+/* ============ Empty workspace (no active thesis) ============ */
+.sojo .empty-ws {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  overflow-y: auto; /* short screens scroll instead of clipping the card */
+}
+.sojo .empty-ws-card { max-width: 620px; width: 100%; text-align: center; }
+.sojo .empty-ws-eye {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 14px;
+}
+.sojo .empty-ws-title {
+  font-family: var(--font-instrument), serif;
+  font-size: 46px; font-weight: 400; letter-spacing: -0.025em;
+  line-height: 1.06; margin: 0 0 14px; color: var(--ink);
+}
+.sojo .empty-ws-title em { font-style: italic; color: var(--accent-deep); }
+.sojo .empty-ws-sub {
+  font-size: 15.5px; color: var(--muted); line-height: 1.6;
+  margin: 0 auto 30px; max-width: 480px;
+}
+.sojo .empty-ws-steps {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  text-align: left; margin: 0 0 30px; padding: 0; list-style: none;
+}
+.sojo .empty-ws-step {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 16px 18px;
+}
+.sojo .empty-ws-step .n {
+  display: inline-grid; place-items: center; width: 24px; height: 24px;
+  border-radius: 50%; background: var(--accent-soft); color: var(--accent-deep);
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; margin-bottom: 10px;
+}
+.sojo .empty-ws-step .s-t { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.sojo .empty-ws-step .s-m { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.sojo .empty-ws-cta {
+  display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap;
+}
+.sojo .empty-ws-link {
+  font-size: 13px; color: var(--muted); text-decoration: none;
+  border-bottom: 1px solid var(--border); padding-bottom: 1px;
+}
+.sojo .empty-ws-link:hover { color: var(--ink); border-color: var(--border-strong); }
+
+@media (max-width: 640px) {
+  .sojo .empty-ws-steps { grid-template-columns: 1fr; gap: 10px; }
+  .sojo .empty-ws-title { font-size: 34px; }
+  .sojo .empty-ws-sub { font-size: 15px; }
+}
+
+/* ============ Shared empty state (Saved / History / Theses) ============ */
+.sojo .empty-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 12px; max-width: 440px; margin: 0 auto; padding: 64px 24px;
+}
+.sojo .empty-state-eye {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint);
+}
+.sojo .empty-state-title {
+  font-family: var(--font-instrument), serif;
+  font-size: 32px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.1;
+  color: var(--ink); margin: 0;
+}
+.sojo .empty-state-title em { font-style: italic; color: var(--accent-deep); }
+.sojo .empty-state-sub {
+  font-size: 14.5px; color: var(--muted); line-height: 1.6; margin: 0 0 6px;
+}
+@media (max-width: 640px) {
+  .sojo .empty-state { padding: 48px 20px; }
+  .sojo .empty-state-title { font-size: 27px; }
 }

@@ -25,12 +25,25 @@ export function Stage5Generate() {
   const [usedFallback, setUsedFallback] = useState(false);
   const kickedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Tick elapsed for UI clock
+  // Tick elapsed for the UI clock while generation is in flight.
   useEffect(() => {
-    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(id);
+    elapsedTimerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => {
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
   }, []);
+
+  // Freeze the clock the moment we're done (or failed). Without this the
+  // interval keeps counting for as long as the tab stays open, so a finished
+  // thesis showed nonsense like "11:37 / 4:00 · Ready".
+  useEffect(() => {
+    if ((ready || failed) && elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
+  }, [ready, failed]);
 
   // Dev override via tweaks
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { HistoryRow } from '@/app/app/_components/HistoryRow';
+import { EmptyState } from '@/app/app/_components/EmptyState';
 
 export const dynamic = 'force-dynamic';
 // Serve near the Supabase DB (Mumbai) — these pages are pure DB reads, and the
@@ -68,7 +69,14 @@ export default async function HistoryPage() {
         </div>
       </div>
 
-      {rows.length === 0 ? null : (
+      {rows.length === 0 ? (
+        <EmptyState
+          eyebrow="Search history"
+          title={<>No searches <em>yet</em>.</>}
+          sub="Every search you run is saved here so you can jump back to any board. Run your first one from your workspace."
+          cta={{ href: '/app', label: 'Start searching →' }}
+        />
+      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
           {rows.map((r) => {
             const otherThesis = activeThesisId !== null && r.thesis_id !== activeThesisId;

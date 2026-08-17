@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LS_KEY } from '@/app/_components/flow/FlowProvider';
+import { EmptyState } from '@/app/app/_components/EmptyState';
 
 export interface ThesisRow {
   id: string;
@@ -89,7 +90,11 @@ export function ThesisManager({ initial }: { initial: ThesisRow[] }) {
       {error && <p style={styles.error}>{error}</p>}
 
       {theses.length === 0 ? (
-        <p style={styles.empty}>No theses yet. Start one to begin searching.</p>
+        <EmptyState
+          eyebrow="Your theses"
+          title={<>No theses <em>yet</em>.</>}
+          sub="A thesis is a short brief on what you're hunting for — who you are, what you'd buy, your hard no's. Hit “+ New thesis” above and your searches build from it."
+        />
       ) : (
         <ul style={styles.list}>
           {theses.map((t) => (
