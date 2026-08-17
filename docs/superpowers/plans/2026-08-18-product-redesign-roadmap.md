@@ -13,9 +13,25 @@
 ## Before you start
 
 1. This plan assumes **origin/main at commit `f97e5ac`** (PR #46 merged) as the baseline. `git fetch origin && git checkout main && git pull` first — verify with `git log --oneline -1`.
-2. **`npm test && npm run typecheck`** must pass before every commit. `npm run build` before opening each phase's PR.
-3. One phase = one branch = one PR. Do not combine phases in a single PR — each is meant to be reviewable and revertible independently.
-4. **Model guidance:** every task below is written in full, unambiguous detail specifically so it can be executed by Claude Sonnet 5 without loss of quality — the planning/architecture judgment already happened in writing this document. Reserve Opus/Fable-tier models for writing the *next* phase's plan, not for executing this one.
+2. **Verified baseline, 2026-08-18:** `npm ci && npm test && npm run typecheck && npm run build` on this exact commit passes clean — 194/194 tests, no type errors, all 23 routes compile. If your local run doesn't match this (fewer/more tests, a build error unrelated to your own edits), stop and diagnose the environment before writing any Phase 1 code — don't debug a pre-existing problem as if it were something you caused.
+3. **`npm test && npm run typecheck`** must pass before every commit. `npm run build` before opening each phase's PR.
+4. One phase = one branch = one PR. Do not combine phases in a single PR — each is meant to be reviewable and revertible independently.
+5. **Model guidance:** every task below is written in full, unambiguous detail specifically so it can be executed by Claude Sonnet 5 without loss of quality — the planning/architecture judgment already happened in writing this document. Reserve Opus/Fable-tier models for writing the *next* phase's plan, not for executing this one.
+
+---
+
+## Rollout — behavior changes ship OFF by default, at your discretion
+
+Two things in Phase 1 change *behavior* a real user can hit (not just appearance): the auth-gate timing, and exposing password reset. Both ship behind an env var, default OFF, so merging Phase 1 to `main` and deploying it changes **nothing** about what users experience until someone deliberately flips the var in Vercel. This is the "still working" guarantee: the default state is byte-for-byte today's live behavior.
+
+| Flag | Default | OFF behavior (today, unchanged) | ON behavior (Phase 1) |
+|---|---|---|---|
+| `NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3` | unset → OFF | Gate at `stage >= 1`, `context="start"` — today's live wall right after landing | Gate at `stage >= 3`, `context="claim"` — wall moves to right before the paid conversation |
+| `NEXT_PUBLIC_ENABLE_PASSWORD_RESET` | unset → OFF | No "Forgot your password?" link on `/login` | Link shown; `/forgot-password` and `/reset-password` are always live regardless of this flag (so the team can test the flow directly by URL before exposing the link) |
+
+Both are `NEXT_PUBLIC_`-prefixed because the gate check runs in a client component (`WizardPage.tsx`) — Next.js only inlines `NEXT_PUBLIC_*` vars into the client bundle, a bare `ENABLE_...` there would silently always read `undefined`. Read as `process.env.NEXT_PUBLIC_X === 'true'` — matches the existing `SCRAPER_DISABLED_SOURCES`-style direct env read already used in `lib/scraping/registry.ts:230-233`; no new abstraction layer.
+
+**To turn a flag on:** set it to `true` in Vercel's project environment settings for the target environment (Preview to test, Production when ready) and redeploy. No code change, no new PR — that's the "at your discretion" lever. Restyling (Tasks 2–4) and the password-reset backend/routes themselves (Task 6) have no user-visible behavior change and are **not** flagged — they're always on once merged, since a restyled page or an unlinked-but-functional route can't regress anything.
 
 ---
 
@@ -254,11 +270,13 @@ export default async function LoginPage({
             labelStyle={styles.label}
             inputStyle={styles.input}
           />
-          <div style={{ textAlign: 'right', marginTop: -6 }}>
-            <Link href="/forgot-password" style={{ ...styles.link, fontSize: 12.5 }}>
-              Forgot your password?
-            </Link>
-          </div>
+          {process.env.NEXT_PUBLIC_ENABLE_PASSWORD_RESET === 'true' && (
+            <div style={{ textAlign: 'right', marginTop: -6 }}>
+              <Link href="/forgot-password" style={{ ...styles.link, fontSize: 12.5 }}>
+                Forgot your password?
+              </Link>
+            </div>
+          )}
           <button type="submit" style={styles.button}>
             Sign in
           </button>
@@ -269,19 +287,18 @@ export default async function LoginPage({
 }
 ```
 
-The only real changes from the original: `authPageStyles` replaces the local `styles` object, and a "Forgot your password?" link is added above the submit button (wired to Task 7's new route).
+The only real changes from the original: `authPageStyles` replaces the local `styles` object, and a "Forgot your password?" link is added above the submit button, gated behind `NEXT_PUBLIC_ENABLE_PASSWORD_RESET` (default off — see the Rollout section). `/login` is a server component, so this reads the plain (non-`NEXT_PUBLIC_`-*requiring*) env var directly server-side same as the client would; using the `NEXT_PUBLIC_` name here too is just consistency with the client-side flag in Task 5, not a technical requirement on this page.
 
 - [ ] **Step 2: Verify manually**
 
-Run: `npm run dev`, visit `/login`.
-Expected: paper background, serif "Sign in" heading, ink-toned form, a working "Forgot your password?" link (404 until Task 7 lands — that's expected mid-phase). Trigger the error banner by submitting a wrong password — it should render in the crimson tokens, not the old hardcoded red.
+Run: `npm run dev`, visit `/login` with the flag unset. Expected: paper background, serif "Sign in" heading, ink-toned form, **no** "Forgot your password?" link (flag defaults off). Trigger the error banner by submitting a wrong password — it should render in the crimson tokens, not the old hardcoded red. Then set `NEXT_PUBLIC_ENABLE_PASSWORD_RESET=true` in `.env.local`, restart, confirm the link appears (it 404s until Task 7 lands — expected mid-phase). Remove the line from `.env.local` when done, same as Task 5.
 
 - [ ] **Step 3: Gate + commit**
 
 ```bash
 npm test && npm run typecheck
 git add app/login/page.tsx
-git commit -m "feat(auth): restyle /login with brand tokens, add forgot-password link"
+git commit -m "feat(auth): restyle /login with brand tokens, add forgot-password link behind NEXT_PUBLIC_ENABLE_PASSWORD_RESET"
 ```
 
 ---
@@ -451,9 +468,9 @@ git commit -m "feat(auth): restyle the onboarding handoff page with brand tokens
 - Modify: `app/_components/flow/WizardPage.tsx`
 - Modify: `app/_components/flow/Stage6Deliver.tsx`
 
-This is the fix for the flow-audit's Dip №1: today the wizard gates at `stage >= 1` — a visitor hits the signup wall immediately after landing, before seeing any product value. Stages 1–2 (archetype pick, five fast facts) make no API calls; only Stage 3's conversation does (`/api/chat`). Moving the threshold lets a visitor complete the free part of the wizard before being asked to create an account.
+This is the fix for the flow-audit's Dip №1: today the wizard gates at `stage >= 1` — a visitor hits the signup wall immediately after landing, before seeing any product value. Stages 1–2 (archetype pick, five fast facts) make no API calls; only Stage 3's conversation does (`/api/chat`). Moving the threshold lets a visitor complete the free part of the wizard before being asked to create an account. **This is a real behavior change, so it's gated behind `NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3` (see the Rollout section above) — merging and deploying this task changes nothing until the flag is explicitly turned on.**
 
-- [ ] **Step 1: Change the gate threshold and context**
+- [ ] **Step 1: Make the gate threshold and context flag-conditional**
 
 In `app/_components/flow/WizardPage.tsx`, replace:
 
@@ -473,23 +490,27 @@ In `app/_components/flow/WizardPage.tsx`, replace:
 with:
 
 ```tsx
-  // Login before the conversation: /api/chat (stage 3) and /api/thesis (stage 5)
-  // are auth-gated and 401 without a session. Stages 1-2 (archetype, five fast
-  // facts) make no API calls, so a visitor completes them free and only hits
-  // the gate at stage 3 — maximum sunk effort, minimum cost, right before the
-  // expensive part. The route handlers stay gated server-side regardless —
-  // this is just the UX layer moving where the ask appears.
-  if (state.stage >= 3) {
+  // Login before onboarding. Where the gate sits is flag-controlled:
+  //   OFF (default) — today's live behavior. Gate at stage 1, right after the
+  //     public landing (stage 0). Simple: the whole wizard is auth-only.
+  //   ON — the Phase 1 redesign. Stages 1-2 (archetype, five fast facts) make
+  //     no API calls, so a visitor completes them free; the gate moves to
+  //     stage 3, right before /api/chat — maximum sunk effort, minimum cost.
+  // /api/chat (stage 3) and /api/thesis (stage 5) are auth-gated server-side
+  // regardless of this flag — this only changes where the UX layer asks.
+  const gateAtStage3 = process.env.NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3 === 'true';
+  const gateThreshold = gateAtStage3 ? 3 : 1;
+  if (state.stage >= gateThreshold) {
     if (loading) return null; // don't render a stage (or fire its calls) until auth resolves
-    if (!user) return <Stage7AuthGate context="claim" />;
+    if (!user) return <Stage7AuthGate context={gateAtStage3 ? 'claim' : 'start'} />;
   }
 ```
 
 (`context="claim"` reuses the existing "save your thesis" copy variant already built into `Stage7AuthGate` for exactly this "save what you've done so far" moment — no new copy needed.)
 
-- [ ] **Step 2: Remove the now-dead unauthenticated branches in Stage6Deliver**
+- [ ] **Step 2: Remove the now-dead unauthenticated branches in Stage6Deliver — unconditional, not flag-gated**
 
-A user can only reach Stage 6 by first passing the Stage 3 gate — `Stage6Deliver`'s `!user` branches are unreachable after Step 1. In `app/_components/flow/Stage6Deliver.tsx`, there are two `{user ? (...) : (...)}` ternaries (search `href="/signup?next=/app/onboarding"` to find both). Replace each with just the truthy branch's JSX (drop the ternary and the `: (...)` half entirely), e.g. the first one:
+This cleanup is safe regardless of the flag: even under **today's live** `stage >= 1` gate, a user can never reach Stage 6 without being authenticated already (stage 1 already blocks anonymous users, and every stage from 1 to 6 is downstream of that check) — so `Stage6Deliver`'s `!user` branches are dead code *today*, not just after Step 1's change. `git blame` traces them to before the gate existed at all; nothing since has removed them. In `app/_components/flow/Stage6Deliver.tsx`, there are two `{user ? (...) : (...)}` ternaries (search `href="/signup?next=/app/onboarding"` to find both). Replace each with just the truthy branch's JSX (drop the ternary and the `: (...)` half entirely), e.g. the first one:
 
 ```tsx
         <div className="s6-ribbon-actions">
@@ -533,22 +554,26 @@ becomes:
 
 Apply the same collapse to the second occurrence further down the file. Once both are collapsed, `user` may become an unused destructured value from `useAuth()` at the top of the component — if `loading` is also unused after this change, run `npm run typecheck` (Step 4 below) and let the compiler tell you; if only `user` triggers an unused-variable error, destructure `{ user: _user, loading }` is wrong — just remove `user` from the destructure if nothing else in the file reads it (grep `\buser\b` in the file first to confirm).
 
-- [ ] **Step 3: Verify manually**
+- [ ] **Step 3: Verify manually — both flag states**
 
-Run: `npm run dev` in an incognito window (no session). Visit `/`, click through Stage 0 → 1 (archetype) → 2 (five fast facts) — confirm NO auth prompt appears at any point. Click "Continue" out of Stage 2 — confirm the auth gate now appears, styled as "Save your thesis" (the `claim` copy), not "Sign in to begin" (the old `start` copy). Sign up, confirm you land in Stage 3 (the conversation) with your Stage 1–2 answers intact.
+First, **flag OFF (default — this is the "still working" check)**: run `npm run dev` with no `NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3` set (or set to anything other than `'true'`) in an incognito window. Visit `/`, click "Begin" — confirm the auth wall appears immediately at Stage 1, exactly as it does on production today, with the "Sign in to begin" (`start`) copy. This confirms the default path is unchanged.
+
+Then, **flag ON**: stop the dev server, add `NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3=true` to `.env.local`, restart `npm run dev`, same incognito test. Visit `/`, click through Stage 0 → 1 (archetype) → 2 (five fast facts) — confirm NO auth prompt appears at any point. Click "Continue" out of Stage 2 — confirm the auth gate now appears, styled as "Save your thesis" (the `claim` copy). Sign up, confirm you land in Stage 3 (the conversation) with your Stage 1–2 answers intact. **Remove the line from `.env.local` when done** — don't let a local override mask the default-OFF behavior for the next task.
 
 - [ ] **Step 4: Gate + commit**
 
 ```bash
 npm test && npm run typecheck
 git add app/_components/flow/WizardPage.tsx app/_components/flow/Stage6Deliver.tsx
-git commit -m "fix(wizard): move the auth gate from stage 1 to stage 3
+git commit -m "fix(wizard): auth-gate stage-3 timing behind NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3
 
-Stages 1-2 make no API calls, so a visitor now completes the free part
-of the wizard (archetype, five fast facts) before being asked to create
-an account -- the gate now appears right before the paid conversation
-instead of immediately after the landing page. Removes Stage6Deliver's
-now-unreachable unauthenticated branches."
+Behind the flag (off by default -- today's stage-1 gate is unchanged):
+stages 1-2 make no API calls, so a visitor completes the free part of
+the wizard (archetype, five fast facts) before being asked to create
+an account -- the gate moves to right before the paid conversation
+instead of sitting immediately after the landing page. Also removes
+Stage6Deliver's unauthenticated branches, which are unreachable dead
+code under either gate position (unconditional cleanup, not flagged)."
 ```
 
 ---
@@ -793,12 +818,13 @@ git commit -m "feat(auth): password reset frontend — request, confirmation, an
 
 ## Final verification for Phase 1
 
-- [ ] `npm test && npm run typecheck && npm run build` — all green.
-- [ ] Full manual walkthrough in an incognito window: landing → Stage 1 → Stage 2 (no auth prompt) → Stage 3 gate (styled, "Save your thesis" copy) → sign up → conversation → ... → Stage 6 → workspace.
-- [ ] Full manual walkthrough of `/login` (including the new forgot-password link) and `/signup` in their restyled state.
-- [ ] Full password-reset round trip (Task 7, Step 3) completed once against a real or local Supabase instance.
-- [ ] Confirm `NEXT_PUBLIC_SITE_URL` is set in Vercel's production environment before this merges — reset links will silently point at `localhost` otherwise.
-- [ ] Open the PR against `main`, titled something like "Phase 1: auth foundation — brand styling, gate timing, password reset."
+- [ ] `npm test && npm run typecheck && npm run build` — all green. Compare test count to the documented baseline (194 passing) — it should only go up (new tests you added), never down.
+- [ ] **With both flags unset (default state) — this is the "still working" gate that must pass before anything else:** landing → click "Begin" → auth wall appears immediately at Stage 1 with `start` copy, no "Forgot your password?" link on `/login`. This should be indistinguishable from production today.
+- [ ] With `NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3=true`: landing → Stage 1 → Stage 2 (no auth prompt) → Stage 3 gate (styled, "Save your thesis" copy) → sign up → conversation → ... → Stage 6 → workspace.
+- [ ] With `NEXT_PUBLIC_ENABLE_PASSWORD_RESET=true`: full manual walkthrough of `/login` (including the forgot-password link) and `/signup` in their restyled state, plus one full password-reset round trip (Task 7, Step 3) against a real or local Supabase instance.
+- [ ] Confirm `NEXT_PUBLIC_SITE_URL` is set in Vercel's production environment before turning `NEXT_PUBLIC_ENABLE_PASSWORD_RESET` on there — reset links will silently point at `localhost` otherwise. This only matters once the flag is flipped in production; it does not block merging Phase 1 itself.
+- [ ] Open the PR against `main`, titled something like "Phase 1: auth foundation — brand styling, gate timing, password reset." Note in the PR description that merging this deploys no user-visible change — both flags default off.
+- [ ] **After merge, decide on the flags separately from the merge decision.** Turn `NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3` and `NEXT_PUBLIC_ENABLE_PASSWORD_RESET` on in Vercel Preview first, confirm with a real walkthrough there, then Production — on your own timeline, no code change required either way.
 
 ## Deferred out of Phase 1
 
