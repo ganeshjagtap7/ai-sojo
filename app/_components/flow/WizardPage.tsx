@@ -28,15 +28,19 @@ function StageRouter() {
     }
   }, [loading, user, state.stage, dispatch]);
 
-  // Login before onboarding: the wizard hits paid, auth-gated endpoints
-  // (/api/chat at stage 3, /api/thesis at stage 5). Without a session those
-  // 401 mid-flow, so require auth to advance past the public landing (stage 0).
-  // Stages 1-2 make no API calls, but gating the whole wizard keeps the rule
-  // simple and matches PRD G1 ("no unauthenticated paid endpoints"). The route
-  // handlers stay gated server-side regardless — this is just the UX layer.
-  if (state.stage >= 1) {
+  // Login before onboarding. Where the gate sits is flag-controlled:
+  //   OFF (default) — today's live behavior. Gate at stage 1, right after the
+  //     public landing (stage 0). Simple: the whole wizard is auth-only.
+  //   ON — the Phase 1 redesign. Stages 1-2 (archetype, five fast facts) make
+  //     no API calls, so a visitor completes them free; the gate moves to
+  //     stage 3, right before /api/chat — maximum sunk effort, minimum cost.
+  // /api/chat (stage 3) and /api/thesis (stage 5) are auth-gated server-side
+  // regardless of this flag — this only changes where the UX layer asks.
+  const gateAtStage3 = process.env.NEXT_PUBLIC_ENABLE_AUTH_GATE_STAGE3 === 'true';
+  const gateThreshold = gateAtStage3 ? 3 : 1;
+  if (state.stage >= gateThreshold) {
     if (loading) return null; // don't render a stage (or fire its calls) until auth resolves
-    if (!user) return <Stage7AuthGate context="start" />;
+    if (!user) return <Stage7AuthGate context={gateAtStage3 ? 'claim' : 'start'} />;
   }
 
   // Don't flash the Stage 0 hero to a signed-in user while the effect above
