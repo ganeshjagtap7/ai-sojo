@@ -418,6 +418,7 @@ Delete the file's local `const styles: Record<string, React.CSSProperties> = { .
 ```ts
 const styles: Record<string, React.CSSProperties> = {
   ...authPageStyles,
+  card: { ...authPageStyles.card, alignItems: 'center', textAlign: 'center' },
   spinner: {
     width: 28,
     height: 28,
@@ -431,12 +432,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 8,
   },
 };
 ```
 
-Keep the rest of the file (the component logic, the JSX referencing `styles.main`, `styles.card`, etc.) exactly as it is — every key it references either comes from the spread `authPageStyles` or the two additions above.
+Keep the rest of the file (the component logic, the JSX referencing `styles.main`, `styles.card`, etc.) exactly as it is — every key it references either comes from the spread `authPageStyles` or the two additions above. Note the `card` override: `authPageStyles.card` (Task 1) has no `alignItems`/`textAlign`, but this page's pre-restyle `card` centered its content (`alignItems: 'center', textAlign: 'center'`) — without restoring those two properties here, the heading/subtext/buttons render left-aligned instead of centered. Likewise `actions` needs `justifyContent: 'center'` to match the pre-restyle button row.
 
 - [ ] **Step 3: Add the spin keyframe**
 
