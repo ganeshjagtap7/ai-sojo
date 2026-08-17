@@ -24,6 +24,7 @@
   --amber:         #B2801A;   /* pushback / signals */
   --amber-soft:    rgba(178, 128, 26, 0.08);
   --crimson:       #9B2C2C;   /* disqualifier */
+  --crimson-soft:  rgba(155, 44, 44, 0.08);
 
   /* type */
   --serif:         var(--font-spectral), 'Iowan Old Style', Georgia, serif;
