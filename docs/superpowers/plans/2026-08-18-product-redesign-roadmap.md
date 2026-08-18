@@ -788,7 +788,7 @@ export default async function ResetPasswordPage({
             name="password"
             autoComplete="new-password"
             minLength={6}
-            placeholder="8+ characters"
+            placeholder="At least 6 characters"
             labelStyle={styles.label}
             inputStyle={styles.input}
           />
