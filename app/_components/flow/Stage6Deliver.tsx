@@ -101,25 +101,15 @@ export function Stage6Deliver() {
           </span>
         </div>
         <div className="s6-ribbon-actions">
-          {user ? (
-            <button
-              type="button"
-              className="s6-ribbon-btn solid"
-              onClick={onSaveAndView}
-              disabled={ctaDisabled}
-              style={{ display: 'inline-flex', alignItems: 'center' }}
-            >
-              {ctaLabel}
-            </button>
-          ) : (
-            <a
-              className="s6-ribbon-btn solid"
-              href="/signup?next=/app/onboarding"
-              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
-            >
-              Create account to unlock your deals →
-            </a>
-          )}
+          <button
+            type="button"
+            className="s6-ribbon-btn solid"
+            onClick={onSaveAndView}
+            disabled={ctaDisabled}
+            style={{ display: 'inline-flex', alignItems: 'center' }}
+          >
+            {ctaLabel}
+          </button>
         </div>
       </div>
 
@@ -188,36 +178,21 @@ export function Stage6Deliver() {
           <p style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink-70)', maxWidth: 580, margin: '20px auto 32px', lineHeight: 1.6 }}>
             We&apos;ll scan thousands of companies against this thesis and surface the ones worth a Monday call. Your thesis stays saved, your matches stay yours.
           </p>
-          {user ? (
-            <button
-              type="button"
-              onClick={onSaveAndView}
-              disabled={ctaDisabled}
-              style={{
-                display: 'inline-block',
-                fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',
-                padding: '14px 28px', border: '1px solid var(--ink)',
-                background: 'var(--ink)', color: 'var(--paper)',
-                cursor: ctaDisabled ? 'wait' : 'pointer',
-                opacity: ctaDisabled ? 0.7 : 1,
-              }}
-            >
-              {ctaLabel}
-            </button>
-          ) : (
-            <a
-              href="/signup?next=/app/onboarding"
-              style={{
-                display: 'inline-block',
-                fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',
-                padding: '14px 28px', border: '1px solid var(--ink)',
-                background: 'var(--ink)', color: 'var(--paper)',
-                textDecoration: 'none', cursor: 'pointer',
-              }}
-            >
-              Create account to unlock your deals →
-            </a>
-          )}
+          <button
+            type="button"
+            onClick={onSaveAndView}
+            disabled={ctaDisabled}
+            style={{
+              display: 'inline-block',
+              fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',
+              padding: '14px 28px', border: '1px solid var(--ink)',
+              background: 'var(--ink)', color: 'var(--paper)',
+              cursor: ctaDisabled ? 'wait' : 'pointer',
+              opacity: ctaDisabled ? 0.7 : 1,
+            }}
+          >
+            {ctaLabel}
+          </button>
           {persistError && (
             <p style={{ marginTop: 12, fontSize: 13, color: '#991b1b' }}>{persistError}</p>
           )}

@@ -27,16 +27,25 @@ test('signup: weak password → 6-character guidance', () => {
   assert.match(out, /at least 6 characters/i);
 });
 
-test('rate limiting → wait-and-retry message (both contexts)', () => {
+test('reset: weak password → same 6-character guidance as signup', () => {
+  const out = friendlyAuthError('Password should be at least 6 characters', 'reset');
+  assert.match(out, /at least 6 characters/i);
+});
+
+test('rate limiting → wait-and-retry message (all contexts)', () => {
   assert.match(friendlyAuthError('email rate limit exceeded', 'login'), /too many attempts/i);
   assert.match(friendlyAuthError('too many requests', 'signup'), /too many attempts/i);
+  assert.match(friendlyAuthError('too many requests', 'reset'), /too many attempts/i);
 });
 
 test('unknown errors fall back to calm generic copy, never the raw string', () => {
   const login = friendlyAuthError('some_internal_sdk_code_xyz', 'login');
   const signup = friendlyAuthError('some_internal_sdk_code_xyz', 'signup');
+  const reset = friendlyAuthError('some_internal_sdk_code_xyz', 'reset');
   assert.doesNotMatch(login, /xyz/);
   assert.doesNotMatch(signup, /xyz/);
+  assert.doesNotMatch(reset, /xyz/);
   assert.match(login, /sign you in/i);
   assert.match(signup, /create your account/i);
+  assert.match(reset, /update your password/i);
 });

@@ -56,3 +56,53 @@ export async function logout() {
   revalidatePath('/', 'layout');
   redirect('/');
 }
+
+// Request a password-reset email. Always redirects to the same "check your
+// email" message regardless of whether the address has an account — Supabase
+// itself doesn't disclose this (same anti-enumeration principle already
+// documented in lib/errors/authError.ts for login), so neither do we.
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim();
+
+  if (!email) {
+    redirect(`/forgot-password?error=${encodeURIComponent('Enter your email address')}`);
+  }
+
+  const supabase = await createClient();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/reset-password')}`,
+  });
+  // Deliberately ignore the error/success distinction from Supabase here —
+  // same reasoning as above. A real send failure (misconfigured SMTP) is a
+  // config problem to catch in ops monitoring, not something to surface to
+  // the requester.
+
+  redirect(`/forgot-password?sent=1&email=${encodeURIComponent(email)}`);
+}
+
+// Set a new password. Only reachable with an active session -- the user
+// arrives here via the emailed reset link, which /auth/callback already
+// exchanged for a session before redirecting to /reset-password.
+export async function updatePassword(formData: FormData) {
+  const password = String(formData.get('password') ?? '');
+
+  if (!password || password.length < 6) {
+    redirect(`/reset-password?error=${encodeURIComponent('Password must be at least 6 characters')}`);
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    // Expired/invalid link, or a direct visit with no session.
+    redirect(`/forgot-password?error=${encodeURIComponent('This link has expired or is invalid. Request a new one.')}`);
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    const friendly = friendlyAuthError(error.message, 'reset');
+    redirect(`/reset-password?error=${encodeURIComponent(friendly)}`);
+  }
+
+  redirect('/login?message=' + encodeURIComponent('Password updated. Sign in with your new password.'));
+}

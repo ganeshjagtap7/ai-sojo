@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LS_KEY } from '@/app/_components/flow/FlowProvider';
 import { friendlyActionError } from '@/lib/errors/actionError';
+import { authPageStyles } from '@/app/_components/auth/authPageStyles';
 
 type Status = 'persisting' | 'done' | 'failed';
 
@@ -124,16 +125,22 @@ export default function OnboardingHandoffPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  main: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem', fontFamily: 'var(--font-inter)' },
-  card: { width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', textAlign: 'center' },
-  heading: { fontSize: 22, fontWeight: 600, margin: 0 },
-  sub: { fontSize: 14, color: '#555', margin: 0 },
-  error: { fontSize: 13, padding: 12, borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', margin: 0 },
-  actions: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' },
-  button: { padding: '0.625rem 1rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' },
-  buttonSecondary: { padding: '0.625rem 1rem', fontSize: 14, fontWeight: 500, borderRadius: 6, background: '#fff', color: '#111', border: '1px solid #d4d4d8', cursor: 'pointer' },
+  ...authPageStyles,
+  card: { ...authPageStyles.card, alignItems: 'center', textAlign: 'center' },
   spinner: {
-    width: 28, height: 28, border: '3px solid #e5e7eb', borderTopColor: '#111',
-    borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+    width: 28,
+    height: 28,
+    border: '3px solid var(--ink-12)',
+    borderTopColor: 'var(--accent)',
+    borderRadius: '50%',
+    margin: '0 auto 16px',
+    animation: 'spin 0.8s linear infinite',
+  },
+  actions: {
+    display: 'flex',
+    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
   },
 };

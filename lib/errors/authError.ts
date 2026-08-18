@@ -9,7 +9,7 @@
  * anti-enumeration). Login therefore can't truthfully say "email not found" —
  * we show one combined message that also nudges account creation.
  */
-export type AuthContext = 'login' | 'signup';
+export type AuthContext = 'login' | 'signup' | 'reset';
 
 export function friendlyAuthError(rawMessage: string, context: AuthContext): string {
   const m = (rawMessage ?? '').toLowerCase();
@@ -25,7 +25,7 @@ export function friendlyAuthError(rawMessage: string, context: AuthContext): str
     return "We couldn't reach the server. Check your connection and try again.";
   }
 
-  // Rate limiting — common to both flows.
+  // Rate limiting — common to all three flows.
   if (m.includes('rate limit') || m.includes('too many')) {
     return 'Too many attempts — please wait a moment and try again.';
   }
@@ -40,12 +40,19 @@ export function friendlyAuthError(rawMessage: string, context: AuthContext): str
     return "We couldn't sign you in. Please try again.";
   }
 
-  // context === 'signup'
-  if (m.includes('already registered') || m.includes('already exists') || m.includes('user already')) {
-    return 'That email is already registered — try signing in instead.';
-  }
+  // Weak-password messaging is shared between signup and password-reset —
+  // both flows set a new password and Supabase returns the same complaint.
   if (m.includes('password') && (m.includes('at least') || m.includes('should be') || m.includes('weak') || m.includes('6 char'))) {
     return 'Please choose a password with at least 6 characters.';
   }
-  return "We couldn't create your account. Please try again.";
+
+  if (context === 'signup') {
+    if (m.includes('already registered') || m.includes('already exists') || m.includes('user already')) {
+      return 'That email is already registered — try signing in instead.';
+    }
+    return "We couldn't create your account. Please try again.";
+  }
+
+  // context === 'reset'
+  return "We couldn't update your password. Please try again.";
 }

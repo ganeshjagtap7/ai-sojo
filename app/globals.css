@@ -24,6 +24,7 @@
   --amber:         #B2801A;   /* pushback / signals */
   --amber-soft:    rgba(178, 128, 26, 0.08);
   --crimson:       #9B2C2C;   /* disqualifier */
+  --crimson-soft:  rgba(155, 44, 44, 0.08);
 
   /* type */
   --serif:         var(--font-spectral), 'Iowan Old Style', Georgia, serif;
@@ -300,6 +301,10 @@ img, video, canvas { max-width: 100%; height: auto; }
 @keyframes pulse-ring {
   0%   { transform: scale(0.6); opacity: 0.8; }
   100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ===== Header / nav chrome shared across prototypes ===== */
