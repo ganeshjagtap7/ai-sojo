@@ -8,8 +8,11 @@ import { PasswordField } from './PasswordField';
 
 type Mode = 'signup' | 'signin';
 
-// 'start' = front-door gate before the onboarding wizard; 'claim' = end-of-funnel
-// "save your finished thesis" gate. Copy differs; the auth logic is identical.
+// 'start' = front-door gate before the onboarding wizard; 'claim' = the
+// flagged mid-funnel gate that fires after the free stages (archetype +
+// five fast facts), before the paid conversation stage — nothing has been
+// generated yet at this point, so copy must not claim a thesis is "ready".
+// Auth logic is identical for both.
 type Context = 'start' | 'claim';
 
 export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
@@ -70,11 +73,11 @@ export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
     <div className="s7 fade-in">
       <div className="s7-inner" style={{ display: 'grid', gridTemplateColumns: '1fr', maxWidth: 480, margin: '0 auto' }}>
         <div className="s7-col">
-          <h2>{context === 'start' ? <>Sign in to <em>begin</em>.</> : <>Save your <em>thesis</em>.</>}</h2>
+          <h2>{context === 'start' ? <>Sign in to <em>begin</em>.</> : <>Sign in to <em>continue</em>.</>}</h2>
           <p>
             {context === 'start'
               ? 'Sojo builds your investment thesis through a short guided conversation, then returns a ranked target list. Create a free account to get started — your work saves automatically as you go.'
-              : "Your thesis, target list, and transcript are ready. Create a free account to claim them — we'll send it all to your inbox and keep your work accessible."}
+              : "You've told us who you are and what you're looking for. Create a free account to continue — we'll guide you through a short conversation and save your work as you go."}
           </p>
 
           <form onSubmit={handleSubmit} style={formStyles.form}>
@@ -107,7 +110,7 @@ export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
                 ? 'Working…'
                 : context === 'start'
                   ? mode === 'signup' ? 'Create account & begin' : 'Sign in & begin'
-                  : mode === 'signup' ? 'Create account & claim thesis' : 'Sign in & claim thesis'}
+                  : mode === 'signup' ? 'Create account & continue' : 'Sign in & continue'}
             </button>
 
             <button
@@ -122,7 +125,7 @@ export function Stage7AuthGate({ context = 'claim' }: { context?: Context }) {
           <p className="caption" style={{ marginTop: 16, textAlign: 'center' }}>
             {context === 'start'
               ? 'Free to start — no card required.'
-              : 'Nothing is lost — your thesis waits behind sign-up.'}
+              : 'Nothing is lost — your answers are saved behind sign-up.'}
           </p>
         </div>
       </div>
