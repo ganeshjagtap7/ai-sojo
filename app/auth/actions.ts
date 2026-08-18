@@ -100,7 +100,7 @@ export async function updatePassword(formData: FormData) {
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    const friendly = friendlyAuthError(error.message, 'signup'); // same "weak password" style messaging
+    const friendly = friendlyAuthError(error.message, 'reset');
     redirect(`/reset-password?error=${encodeURIComponent(friendly)}`);
   }
 
